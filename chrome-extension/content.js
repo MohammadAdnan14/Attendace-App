@@ -79,9 +79,14 @@ function calculateInsights() {
       return;
     }
 
+    let belowThreshold = false;
+    let extraClasses = 0;
+    let directAttendance = 0;
+    let bunkable = 0;
     let message = "";
+
     if ((attended / total) * 100 < threshold) {
-      let extraClasses = 0;
+      belowThreshold = true;
       let tempAttended = attended;
       let tempTotal = total;
       
@@ -90,22 +95,19 @@ function calculateInsights() {
         tempTotal += 1;
         extraClasses += 1;
       }
-      const directAttendance = Math.ceil((threshold / 100) * total) - attended;
-      message = "⚠️ Attend " + extraClasses + " more classes (or get " + directAttendance + " attendance added) to cross " + threshold + "%";
+      directAttendance = Math.ceil((threshold / 100) * total) - attended;
     } else {
-      let bunkable = 0;
       let tempTotal = total;
-      
       while ((attended / tempTotal) * 100 >= threshold) {
         tempTotal += 1;
         bunkable += 1;
       }
       bunkable -= 1; // The last increment takes it below threshold
       message = percentage === 100
-        ? "😎 You can bunk " + bunkable + " classes and still stay above " + threshold + "%"
+        ? "😎 You can skip " + bunkable + " classes"
         : bunkable === 0 
-          ? "😅 You're right on edge, do not skip classes"
-          : "✅ You can bunk " + bunkable + " classes and still stay above " + threshold + "%";
+          ? "😅 You're right on edge"
+          : "✅ You can skip " + bunkable + " classes";
     }
 
     results.push({ 
@@ -113,12 +115,60 @@ function calculateInsights() {
       percentage: percentage.toFixed(2), 
       message,
       attended,
-      total
+      total,
+      belowThreshold,
+      extraClasses,
+      directAttendance,
+      bunkable
     });
   });
 
   console.log('Final results:', results);
   displayPopup(results);
+}
+
+function calculateOverallAttendance(data) {
+  const total = data.reduce((sum, course) => sum + course.total, 0);
+  const attended = data.reduce((sum, course) => sum + course.attended, 0);
+  const percentage = (attended / total) * 100;
+  const overallThreshold = 75; // Fixed threshold for overall attendance
+  
+  let belowThreshold = false;
+  let requiredClasses = 0;
+  let directAttendance = 0;
+  let skippableClasses = 0;
+  let message = "";
+
+  if (percentage < overallThreshold) {
+    belowThreshold = true;
+    let currentAttended = attended;
+    let currentTotal = total;
+    
+    while ((currentAttended / currentTotal) * 100 < overallThreshold) {
+      currentAttended++;
+      currentTotal++;
+      requiredClasses++;
+    }
+    directAttendance = Math.ceil((overallThreshold / 100) * total) - attended;
+  } else {
+    skippableClasses = Math.floor((attended / 0.75) - total);
+    message = percentage === 100
+      ? "😎 You can skip " + skippableClasses + " classes"
+      : skippableClasses === 0
+        ? "😅 You're right on edge"
+        : "✅ You can skip " + skippableClasses + " classes";
+  }
+  
+  return {
+    percentage: percentage.toFixed(2),
+    belowThreshold,
+    requiredClasses,
+    directAttendance,
+    skippableClasses,
+    message,
+    total,
+    attended
+  };
 }
 
 function displayPopup(data) {
@@ -131,97 +181,215 @@ function displayPopup(data) {
   const popup = document.createElement("div");
   popup.id = "attendance-popup";
 
+  // Restore states
+  const savedTheme = localStorage.getItem('attendance-theme') || 'light';
+  if (savedTheme === 'dark') {
+    popup.classList.add('dark-theme');
+  }
+  
+  const savedCollapsed = localStorage.getItem('attendance-collapsed') === 'true';
+  if (savedCollapsed) {
+    popup.classList.add('collapsed');
+  }
+
   if (data.length === 0) {
     popup.innerHTML = 
-      "<h3>📊 Attendance Insights</h3>" +
-      "<p>No attendance data found. Please make sure:</p>" +
-      "<ul>" +
-      "<li>You're on the correct page</li>" +
-      "<li>The attendance table is visible</li>" +
-      "<li>You're logged in to the portal</li>" +
-      "</ul>";
+      "<div class='popup-header'>" +
+        "<div class='header-left'>" +
+          "<span class='header-icon'>📊</span>" +
+          "<h3>Attendance Insights</h3>" +
+        "</div>" +
+        "<div class='header-controls'>" +
+          "<button id='theme-toggle' class='control-btn' title='Toggle Theme'>🌓</button>" +
+          "<button id='collapse-toggle' class='control-btn' title='Minimize'>➖</button>" +
+        "</div>" +
+      "</div>" +
+      "<div class='popup-body-wrapper'>" +
+        "<div class='error-view'>" +
+          "<p>No attendance data found. Please make sure:</p>" +
+          "<ul>" +
+            "<li>You're on the correct page</li>" +
+            "<li>The attendance table is visible</li>" +
+            "<li>You're logged in to the portal</li>" +
+          "</ul>" +
+        "</div>" +
+      "</div>";
   } else {
     const overall = calculateOverallAttendance(data);
+    
+    // Sort critical courses to the top so students spot them instantly
+    data.sort((a, b) => {
+      if (a.belowThreshold && !b.belowThreshold) return -1;
+      if (!a.belowThreshold && b.belowThreshold) return 1;
+      return parseFloat(a.percentage) - parseFloat(b.percentage);
+    });
+
+    let overallRecommendations = "";
+    if (overall.belowThreshold) {
+      overallRecommendations = 
+        "<div class='overall-recommendations'>" +
+          "<div class='rec-badge attend'>" +
+            "<span class='badge-label'>Attend:</span>" +
+            "<span class='badge-val'>+" + overall.requiredClasses + " classes</span>" +
+          "</div>" +
+          "<div class='rec-badge direct'>" +
+            "<span class='badge-label'>Claim Leave:</span>" +
+            "<span class='badge-val'>+" + overall.directAttendance + " present</span>" +
+          "</div>" +
+        "</div>";
+    } else {
+      overallRecommendations = "<p class='overall-message safe'>" + overall.message + " to stay above 75%</p>";
+    }
+
     let html = 
-      "<h3>📊 Attendance Insights</h3>" +
-      "<div class='attendance-summary'>" +
-      "<p>Overall Attendance: " + overall.percentage + "%</p>" +
-      "<p class='overall-message'>" + overall.message + "</p>" +
+      "<div class='popup-header'>" +
+        "<div class='header-left'>" +
+          "<span class='header-icon'>📊</span>" +
+          "<h3>Attendance Insights</h3>" +
+        "</div>" +
+        "<div class='header-controls'>" +
+          "<button id='theme-toggle' class='control-btn' title='Toggle Theme'>🌓</button>" +
+          "<button id='collapse-toggle' class='control-btn' title='Minimize'></button>" +
+        "</div>" +
       "</div>" +
-      "<ul>";
+      "<div class='popup-body-wrapper'>" +
+        "<div class='attendance-summary'>" +
+          "<div class='summary-top'>" +
+            "<span class='summary-label'>Overall Attendance</span>" +
+            "<span class='summary-value " + (overall.belowThreshold ? 'low-attendance' : '') + "'>" + overall.percentage + "%</span>" +
+          "</div>" +
+          "<div class='progress-bar-container'>" +
+            "<div class='progress-bar-fill' style='width: " + overall.percentage + "%'></div>" +
+          "</div>" +
+          overallRecommendations +
+        "</div>" +
+        "<ul class='subject-list'>";
     
     data.forEach(d => {
+      let recHtml = "";
+      if (d.belowThreshold) {
+        recHtml = 
+          "<div class='recommendation-badges'>" +
+            "<span class='rec-badge-mini attend'>Attend: +" + d.extraClasses + "</span>" +
+            "<span class='rec-badge-mini direct'>Leave: +" + d.directAttendance + "</span>" +
+          "</div>";
+      } else {
+        recHtml = "<span class='safe-message'>" + d.message + "</span>";
+      }
+
       html += 
-        "<li>" +
-        "<strong>" + d.subject + "</strong>" +
-        "<div class='attendance-details'>" +
-        "<span class='percentage" + (parseFloat(d.percentage) < 60 ? " low-attendance" : "") + "'>" + d.percentage + "%</span>" +
-        "<span class='count'>(" + d.attended + "/" + d.total + ")</span>" +
-        "<span class='message'>" + d.message + "</span>" +
-        "</div>" +
+        "<li class='subject-card " + (d.belowThreshold ? 'warning-card' : '') + "'>" +
+          "<div class='subject-header'>" +
+            "<strong class='subject-title'>" + d.subject + "</strong>" +
+            "<span class='subject-percentage " + (d.belowThreshold ? "low-attendance" : "") + "'>" + d.percentage + "%</span>" +
+          "</div>" +
+          "<div class='subject-body'>" +
+            "<span class='count'>(" + d.attended + "/" + d.total + " classes)</span>" +
+            recHtml +
+          "</div>" +
         "</li>";
     });
+
     html += "</ul>" +
-      "<div class='fun-message'>Okie now bui me Cold Coffe! ☕</div>";
+      "<div class='popup-footer'>" +
+        "<button id='coffee-btn' class='coffee-btn'>☕ Support the Dev</button>" +
+        "<div id='donation-drawer' class='donation-drawer hidden'>" +
+          "<p class='donation-pitch'>If you like our work, kindly help or motivate us!</p>" +
+          
+          "<div class='donation-item'>" +
+            "<div class='donation-meta'>" +
+              "<span class='chain-title'>EVM Address (ETH/BSC/Polygon)</span>" +
+              "<span class='chain-note'>⚠️ Strictly send EVM chain tokens. Others will be lost.</span>" +
+            "</div>" +
+            "<div class='address-copy-container'>" +
+              "<input type='text' readonly class='address-input' value='0xC43947F88eC57D5d96A1A7C6d597c239677dE9B7'>" +
+              "<button class='copy-btn' data-address='0xC43947F88eC57D5d96A1A7C6d597c239677dE9B7'>Copy</button>" +
+            "</div>" +
+          "</div>" +
+
+          "<div class='donation-item'>" +
+            "<div class='donation-meta'>" +
+              "<span class='chain-title'>Solana Address</span>" +
+              "<span class='chain-note'>⚠️ Strictly send Solana network tokens. Others will be lost.</span>" +
+            "</div>" +
+            "<div class='address-copy-container'>" +
+              "<input type='text' readonly class='address-input' value='8LXB8CuiRQumccju3SGXtCFvPehEcARJkwTFAzKVqFtw'>" +
+              "<button class='copy-btn' data-address='8LXB8CuiRQumccju3SGXtCFvPehEcARJkwTFAzKVqFtw'>Copy</button>" +
+            "</div>" +
+          "</div>" +
+        "</div>" +
+      "</div>" +
+    "</div>";
+
     popup.innerHTML = html;
   }
 
   document.body.appendChild(popup);
-}
 
-function calculateOverallAttendance(data) {
-  const total = data.reduce((sum, course) => sum + course.total, 0);
-  const attended = data.reduce((sum, course) => sum + course.attended, 0);
-  const percentage = (attended / total) * 100;
-  const overallThreshold = 75; // Fixed threshold for overall attendance
-  
-  let message = "";
-  if (percentage < overallThreshold) {
-    let requiredClasses = 0;
-    let currentAttended = attended;
-    let currentTotal = total;
-    
-    while ((currentAttended / currentTotal) * 100 < overallThreshold) {
-      currentAttended++;
-      currentTotal++;
-      requiredClasses++;
-    }
-    const directAttendance = Math.ceil((overallThreshold / 100) * total) - attended;
-    message = "⚠️ Attend " + requiredClasses + " more classes (or get " + directAttendance + " attendance added) to reach " + overallThreshold + "%";
-  } else {
-    // Calculate skippable classes: (attended)/(total + x) = 0.75
-    // Solving for x: x = (attended/0.75) - total
-    const skippableClasses = Math.floor((attended / 0.75) - total);
-    message = percentage === 100
-      ? "😎 You can skip " + skippableClasses + " classes and still be above " + overallThreshold + "%"
-      : skippableClasses === 0
-        ? "😅 You're right on edge, do not skip classes 😅"
-        : "✅ You can skip " + skippableClasses + " classes and still be above " + overallThreshold + "%";
+  // Setup event listeners after appending to DOM
+  const themeToggle = document.getElementById('theme-toggle');
+  if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+      popup.classList.toggle('dark-theme');
+      const currentTheme = popup.classList.contains('dark-theme') ? 'dark' : 'light';
+      localStorage.setItem('attendance-theme', currentTheme);
+    });
   }
-  
-  return {
-    percentage: percentage.toFixed(2),
-    message: message
-  };
+
+  const collapseToggle = document.getElementById('collapse-toggle');
+  if (collapseToggle) {
+    // Set initial text/icon based on state
+    collapseToggle.textContent = popup.classList.contains('collapsed') ? "➕" : "➖";
+    
+    collapseToggle.addEventListener('click', () => {
+      popup.classList.toggle('collapsed');
+      const isCollapsed = popup.classList.contains('collapsed');
+      localStorage.setItem('attendance-collapsed', isCollapsed);
+      collapseToggle.textContent = isCollapsed ? "➕" : "➖";
+    });
+  }
+
+  const coffeeBtn = document.getElementById('coffee-btn');
+  const donationDrawer = document.getElementById('donation-drawer');
+  if (coffeeBtn && donationDrawer) {
+    coffeeBtn.addEventListener('click', () => {
+      donationDrawer.classList.toggle('hidden');
+      coffeeBtn.classList.toggle('active');
+    });
+  }
+
+  const copyButtons = popup.querySelectorAll('.copy-btn');
+  copyButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const address = btn.getAttribute('data-address');
+      navigator.clipboard.writeText(address).then(() => {
+        const originalText = btn.textContent;
+        btn.textContent = "Copied!";
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.classList.remove('copied');
+        }, 1500);
+      }).catch(err => {
+        console.error('Failed to copy text: ', err);
+      });
+    });
+  });
 }
 
 // Wait for the page to be fully loaded
 function initializeExtension() {
-  // Clear any existing timeouts
   if (window.attendanceTimeout) {
     clearTimeout(window.attendanceTimeout);
   }
   
-  // Try to run the calculation after a short delay to ensure the page is loaded
   window.attendanceTimeout = setTimeout(() => {
     calculateInsights();
   }, 1000);
   
-  // Set up a mutation observer to watch for table changes
   const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-        // Check if the added nodes contain our target table
         const hasTable = Array.from(mutation.addedNodes).some(node => 
           node.nodeType === 1 && node.matches('table')
         );
@@ -233,14 +401,12 @@ function initializeExtension() {
     }
   });
 
-  // Start observing the document body for changes
   observer.observe(document.body, {
     childList: true,
     subtree: true
   });
 }
 
-// Run when the page is ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initializeExtension);
 } else {

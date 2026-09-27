@@ -607,6 +607,19 @@
   border: 1px solid #f87171;
 }
 
+.sim-btn.reset-subject-btn {
+  background: transparent;
+  color: var(--text-color);
+  border: 1px dashed var(--border-color);
+  opacity: 0.8;
+  margin-left: auto;
+}
+
+.sim-btn.reset-subject-btn:hover {
+  opacity: 1;
+  border-style: solid;
+}
+
 .sim-btn:hover {
   opacity: 0.85;
 }

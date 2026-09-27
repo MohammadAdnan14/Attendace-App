@@ -360,6 +360,8 @@ function displayPopup(data) {
         ? `<span class='delta-tag'>(${d.attendedDelta >= 0 ? '+' + d.attendedDelta : d.attendedDelta}/${d.totalDelta >= 0 ? '+' + d.totalDelta : d.totalDelta})</span>`
         : "";
 
+      const hasSubjectSimulation = (d.attendedDelta !== 0 || d.totalDelta !== 0);
+
       html += 
         "<li class='subject-card " + (d.belowThreshold ? 'warning-card' : '') + "'>" +
           "<div class='subject-header'>" +
@@ -376,6 +378,7 @@ function displayPopup(data) {
               "<button class='sim-btn attend-btn' data-subject='" + encodeURIComponent(d.subject) + "' title='Simulate Attending 1 Class (+1 Attended, +1 Total)'>+ Attend</button>" +
               "<button class='sim-btn claim-btn' data-subject='" + encodeURIComponent(d.subject) + "' title='Simulate Claiming Duty/Medical Leave (+1 Attended, +0 Total)'>+ Claim</button>" +
               "<button class='sim-btn miss-btn' data-subject='" + encodeURIComponent(d.subject) + "' title='Simulate Missing 1 Class (+0 Attended, +1 Total)'>- Miss</button>" +
+              (hasSubjectSimulation ? "<button class='sim-btn reset-subject-btn' data-subject='" + encodeURIComponent(d.subject) + "' title='Reset simulation for this subject'>🔄 Reset</button>" : "") +
             "</div>" : "") +
         "</li>";
     });
@@ -472,6 +475,15 @@ function displayPopup(data) {
         window.attendanceSimulations[subject] = { attendedDelta: 0, totalDelta: 0 };
       }
       window.attendanceSimulations[subject].totalDelta += 1;
+      displayPopup(data);
+    });
+  });
+
+  const resetSubjectBtns = popup.querySelectorAll('.sim-btn.reset-subject-btn');
+  resetSubjectBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const subject = decodeURIComponent(btn.getAttribute('data-subject'));
+      delete window.attendanceSimulations[subject];
       displayPopup(data);
     });
   });

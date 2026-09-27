@@ -361,6 +361,7 @@ function displayPopup(data) {
         : "";
 
       const hasSubjectSimulation = (d.attendedDelta !== 0 || d.totalDelta !== 0);
+      const isFullAttendance = (d.effectiveAttended >= d.effectiveTotal);
 
       html += 
         "<li class='subject-card " + (d.belowThreshold ? 'warning-card' : '') + "'>" +
@@ -376,7 +377,7 @@ function displayPopup(data) {
             "<div class='whatif-controls'>" +
               "<span class='whatif-label'>Simulate:</span>" +
               "<button class='sim-btn attend-btn' data-subject='" + encodeURIComponent(d.subject) + "' title='Simulate Attending 1 Class (+1 Attended, +1 Total)'>+ Attend</button>" +
-              "<button class='sim-btn claim-btn' data-subject='" + encodeURIComponent(d.subject) + "' title='Simulate Claiming Duty/Medical Leave (+1 Attended, +0 Total)'>+ Claim</button>" +
+              "<button class='sim-btn claim-btn" + (isFullAttendance ? " disabled" : "") + "' data-subject='" + encodeURIComponent(d.subject) + "' data-is-full='" + isFullAttendance + "' title='" + (isFullAttendance ? "Attendance is already 100%. Cannot claim duty leave beyond total conducted classes." : "Simulate Claiming Duty/Medical Leave (+1 Attended, +0 Total)") + "'>+ Claim</button>" +
               "<button class='sim-btn miss-btn' data-subject='" + encodeURIComponent(d.subject) + "' title='Simulate Missing 1 Class (+0 Attended, +1 Total)'>- Miss</button>" +
               (hasSubjectSimulation ? "<button class='sim-btn reset-subject-btn' data-subject='" + encodeURIComponent(d.subject) + "' title='Reset simulation for this subject'>🔄 Reset</button>" : "") +
             "</div>" : "") +
@@ -458,6 +459,11 @@ function displayPopup(data) {
   const claimBtns = popup.querySelectorAll('.sim-btn.claim-btn');
   claimBtns.forEach(btn => {
     btn.addEventListener('click', () => {
+      const isFull = btn.getAttribute('data-is-full') === 'true';
+      if (isFull) {
+        showToast("⚠️ Attendance is already 100%! You cannot claim duty/medical leave beyond conducted classes.");
+        return;
+      }
       const subject = decodeURIComponent(btn.getAttribute('data-subject'));
       if (!window.attendanceSimulations[subject]) {
         window.attendanceSimulations[subject] = { attendedDelta: 0, totalDelta: 0 };
@@ -534,6 +540,21 @@ function displayPopup(data) {
       });
     });
   });
+}
+
+function showToast(message) {
+  let toast = document.getElementById('attendance-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'attendance-toast';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.classList.add('show');
+  if (window.toastTimeout) clearTimeout(window.toastTimeout);
+  window.toastTimeout = setTimeout(() => {
+    toast.classList.remove('show');
+  }, 2500);
 }
 
 // Wait for the page to be fully loaded

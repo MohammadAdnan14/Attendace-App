@@ -171,6 +171,10 @@ function calculateOverallAttendance(data) {
   };
 }
 
+// Simulation state: maps subject name -> { attendedDelta: number, totalDelta: number }
+window.attendanceSimulations = window.attendanceSimulations || {};
+window.whatIfModeActive = window.whatIfModeActive || false;
+
 function displayPopup(data) {
   // Remove existing popup if any
   const existingPopup = document.getElementById('attendance-popup');
@@ -192,6 +196,10 @@ function displayPopup(data) {
     popup.classList.add('collapsed');
   }
 
+  if (window.whatIfModeActive) {
+    popup.classList.add('whatif-active');
+  }
+
   if (data.length === 0) {
     popup.innerHTML = 
       "<div class='popup-header'>" +
@@ -200,6 +208,7 @@ function displayPopup(data) {
           "<h3>Attendance Insights</h3>" +
         "</div>" +
         "<div class='header-controls'>" +
+          "<button id='whatif-toggle' class='control-btn" + (window.whatIfModeActive ? " active" : "") + "' title='Toggle What-If Simulation'>🔮</button>" +
           "<button id='theme-toggle' class='control-btn' title='Toggle Theme'>🌓</button>" +
           "<button id='collapse-toggle' class='control-btn' title='Minimize'>➖</button>" +
         "</div>" +
@@ -215,13 +224,75 @@ function displayPopup(data) {
         "</div>" +
       "</div>";
   } else {
-    const overall = calculateOverallAttendance(data);
+    // Apply simulation deltas to data
+    let hasActiveSimulations = false;
+    const simulatedData = data.map(d => {
+      const sim = window.attendanceSimulations[d.subject] || { attendedDelta: 0, totalDelta: 0 };
+      if (sim.attendedDelta !== 0 || sim.totalDelta !== 0) {
+        hasActiveSimulations = true;
+      }
+      
+      const effectiveAttended = Math.max(0, d.attended + sim.attendedDelta);
+      const effectiveTotal = Math.max(1, d.total + sim.totalDelta);
+      const effectivePercentage = (effectiveAttended / effectiveTotal) * 100;
+      const threshold = 60;
+
+      let belowThreshold = false;
+      let extraClasses = 0;
+      let directAttendance = 0;
+      let bunkable = 0;
+      let message = "";
+
+      if (effectivePercentage < threshold) {
+        belowThreshold = true;
+        let tempAttended = effectiveAttended;
+        let tempTotal = effectiveTotal;
+        while ((tempAttended / tempTotal) * 100 < threshold) {
+          tempAttended += 1;
+          tempTotal += 1;
+          extraClasses += 1;
+        }
+        directAttendance = Math.ceil((threshold / 100) * effectiveTotal) - effectiveAttended;
+      } else {
+        let tempTotal = effectiveTotal;
+        while ((effectiveAttended / tempTotal) * 100 >= threshold) {
+          tempTotal += 1;
+          bunkable += 1;
+        }
+        bunkable -= 1;
+        message = effectivePercentage === 100
+          ? "😎 You can skip " + bunkable + " classes"
+          : bunkable === 0 
+            ? "😅 You're right on edge"
+            : "✅ You can skip " + bunkable + " classes";
+      }
+
+      return {
+        ...d,
+        effectiveAttended,
+        effectiveTotal,
+        effectivePercentage: effectivePercentage.toFixed(2),
+        belowThreshold,
+        extraClasses,
+        directAttendance,
+        bunkable,
+        message,
+        attendedDelta: sim.attendedDelta,
+        totalDelta: sim.totalDelta
+      };
+    });
+
+    const overall = calculateOverallAttendance(simulatedData.map(s => ({
+      ...s,
+      attended: s.effectiveAttended,
+      total: s.effectiveTotal
+    })));
     
     // Sort critical courses to the top so students spot them instantly
-    data.sort((a, b) => {
+    simulatedData.sort((a, b) => {
       if (a.belowThreshold && !b.belowThreshold) return -1;
       if (!a.belowThreshold && b.belowThreshold) return 1;
-      return parseFloat(a.percentage) - parseFloat(b.percentage);
+      return parseFloat(a.effectivePercentage) - parseFloat(b.effectivePercentage);
     });
 
     let overallRecommendations = "";
@@ -248,24 +319,26 @@ function displayPopup(data) {
           "<h3>Attendance Insights</h3>" +
         "</div>" +
         "<div class='header-controls'>" +
+          "<button id='whatif-toggle' class='control-btn" + (window.whatIfModeActive ? " active" : "") + "' title='Toggle What-If Simulation'>🔮</button>" +
           "<button id='theme-toggle' class='control-btn' title='Toggle Theme'>🌓</button>" +
           "<button id='collapse-toggle' class='control-btn' title='Minimize'></button>" +
         "</div>" +
       "</div>" +
       "<div class='popup-body-wrapper'>" +
-        "<div class='attendance-summary'>" +
+        "<div class='attendance-summary" + (hasActiveSimulations ? " sim-highlight" : "") + "'>" +
           "<div class='summary-top'>" +
-            "<span class='summary-label'>Overall Attendance</span>" +
+            "<span class='summary-label'>Overall Attendance " + (hasActiveSimulations ? "<span class='sim-tag'>(SIMULATED)</span>" : "") + "</span>" +
             "<span class='summary-value " + (overall.belowThreshold ? 'low-attendance' : '') + "'>" + overall.percentage + "%</span>" +
           "</div>" +
           "<div class='progress-bar-container'>" +
-            "<div class='progress-bar-fill' style='width: " + overall.percentage + "%'></div>" +
+            "<div class='progress-bar-fill' style='width: " + Math.min(100, Math.max(0, overall.percentage)) + "%'></div>" +
           "</div>" +
           overallRecommendations +
+          (hasActiveSimulations ? "<div class='reset-sim-wrapper'><button id='reset-sim-btn' class='reset-sim-btn'>🔄 Reset Simulation</button></div>" : "") +
         "</div>" +
         "<ul class='subject-list'>";
     
-    data.forEach(d => {
+    simulatedData.forEach(d => {
       let recHtml = "";
       if (d.belowThreshold) {
         recHtml = 
@@ -277,16 +350,26 @@ function displayPopup(data) {
         recHtml = "<span class='safe-message'>" + d.message + "</span>";
       }
 
+      const deltaText = d.totalDelta > 0 
+        ? `<span class='delta-tag'>(${d.attendedDelta >= 0 ? '+' + d.attendedDelta : d.attendedDelta}/${d.totalDelta >= 0 ? '+' + d.totalDelta : d.totalDelta})</span>`
+        : "";
+
       html += 
         "<li class='subject-card " + (d.belowThreshold ? 'warning-card' : '') + "'>" +
           "<div class='subject-header'>" +
             "<strong class='subject-title'>" + d.subject + "</strong>" +
-            "<span class='subject-percentage " + (d.belowThreshold ? "low-attendance" : "") + "'>" + d.percentage + "%</span>" +
+            "<span class='subject-percentage " + (d.belowThreshold ? "low-attendance" : "") + "'>" + d.effectivePercentage + "%</span>" +
           "</div>" +
           "<div class='subject-body'>" +
-            "<span class='count'>(" + d.attended + "/" + d.total + " classes)</span>" +
+            "<span class='count'>(" + d.effectiveAttended + "/" + d.effectiveTotal + " classes) " + deltaText + "</span>" +
             recHtml +
           "</div>" +
+          (window.whatIfModeActive ? 
+            "<div class='whatif-controls'>" +
+              "<span class='whatif-label'>Simulate:</span>" +
+              "<button class='sim-btn attend-btn' data-subject='" + encodeURIComponent(d.subject) + "' title='Simulate Attending 1 Class'>+ Attend</button>" +
+              "<button class='sim-btn miss-btn' data-subject='" + encodeURIComponent(d.subject) + "' title='Simulate Missing 1 Class'>- Miss</button>" +
+            "</div>" : "") +
         "</li>";
     });
 
@@ -327,6 +410,47 @@ function displayPopup(data) {
   document.body.appendChild(popup);
 
   // Setup event listeners after appending to DOM
+  const whatIfToggle = document.getElementById('whatif-toggle');
+  if (whatIfToggle) {
+    whatIfToggle.addEventListener('click', () => {
+      window.whatIfModeActive = !window.whatIfModeActive;
+      displayPopup(data);
+    });
+  }
+
+  const resetSimBtn = document.getElementById('reset-sim-btn');
+  if (resetSimBtn) {
+    resetSimBtn.addEventListener('click', () => {
+      window.attendanceSimulations = {};
+      displayPopup(data);
+    });
+  }
+
+  const attendBtns = popup.querySelectorAll('.sim-btn.attend-btn');
+  attendBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const subject = decodeURIComponent(btn.getAttribute('data-subject'));
+      if (!window.attendanceSimulations[subject]) {
+        window.attendanceSimulations[subject] = { attendedDelta: 0, totalDelta: 0 };
+      }
+      window.attendanceSimulations[subject].attendedDelta += 1;
+      window.attendanceSimulations[subject].totalDelta += 1;
+      displayPopup(data);
+    });
+  });
+
+  const missBtns = popup.querySelectorAll('.sim-btn.miss-btn');
+  missBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const subject = decodeURIComponent(btn.getAttribute('data-subject'));
+      if (!window.attendanceSimulations[subject]) {
+        window.attendanceSimulations[subject] = { attendedDelta: 0, totalDelta: 0 };
+      }
+      window.attendanceSimulations[subject].totalDelta += 1;
+      displayPopup(data);
+    });
+  });
+
   const themeToggle = document.getElementById('theme-toggle');
   if (themeToggle) {
     themeToggle.addEventListener('click', () => {
@@ -338,9 +462,7 @@ function displayPopup(data) {
 
   const collapseToggle = document.getElementById('collapse-toggle');
   if (collapseToggle) {
-    // Set initial text/icon based on state
     collapseToggle.textContent = popup.classList.contains('collapsed') ? "➕" : "➖";
-    
     collapseToggle.addEventListener('click', () => {
       popup.classList.toggle('collapsed');
       const isCollapsed = popup.classList.contains('collapsed');

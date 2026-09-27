@@ -181,9 +181,15 @@ window.attendanceSimulations = window.attendanceSimulations || {};
 window.whatIfModeActive = window.whatIfModeActive || false;
 
 function displayPopup(data) {
-  // Remove existing popup if any
+  // Capture current scroll positions before removing existing popup
+  let bodyWrapperScroll = 0;
+  let subjectListScroll = 0;
   const existingPopup = document.getElementById('attendance-popup');
   if (existingPopup) {
+    const existingWrapper = existingPopup.querySelector('.popup-body-wrapper');
+    if (existingWrapper) bodyWrapperScroll = existingWrapper.scrollTop;
+    const existingList = existingPopup.querySelector('.subject-list');
+    if (existingList) subjectListScroll = existingList.scrollTop;
     existingPopup.remove();
   }
 
@@ -413,6 +419,12 @@ function displayPopup(data) {
   }
 
   document.body.appendChild(popup);
+
+  // Restore scroll positions seamlessly
+  const newWrapper = popup.querySelector('.popup-body-wrapper');
+  if (newWrapper && bodyWrapperScroll > 0) newWrapper.scrollTop = bodyWrapperScroll;
+  const newList = popup.querySelector('.subject-list');
+  if (newList && subjectListScroll > 0) newList.scrollTop = subjectListScroll;
 
   // Setup event listeners after appending to DOM
   const whatIfToggle = document.getElementById('whatif-toggle');

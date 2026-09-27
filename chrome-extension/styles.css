@@ -583,10 +583,28 @@
   border: 1px solid var(--badge-attend-text);
 }
 
+.sim-btn.claim-btn {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #b45309;
+}
+
+#attendance-popup.dark-theme .sim-btn.claim-btn {
+  background: #2d261e;
+  color: #fbbf24;
+  border: 1px solid #fbbf24;
+}
+
 .sim-btn.miss-btn {
-  background: var(--badge-leave-bg);
-  color: var(--badge-leave-text);
-  border: 1px solid var(--badge-leave-text);
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #dc2626;
+}
+
+#attendance-popup.dark-theme .sim-btn.miss-btn {
+  background: #311919;
+  color: #f87171;
+  border: 1px solid #f87171;
 }
 
 .sim-btn:hover {

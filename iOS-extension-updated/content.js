@@ -378,8 +378,9 @@ function displayPopup(data) {
           (window.whatIfModeActive ? 
             "<div class='whatif-controls'>" +
               "<span class='whatif-label'>Simulate:</span>" +
-              "<button class='sim-btn attend-btn' data-subject='" + encodeURIComponent(d.subject) + "' title='Simulate Attending 1 Class'>+ Attend</button>" +
-              "<button class='sim-btn miss-btn' data-subject='" + encodeURIComponent(d.subject) + "' title='Simulate Missing 1 Class'>- Miss</button>" +
+              "<button class='sim-btn attend-btn' data-subject='" + encodeURIComponent(d.subject) + "' title='Simulate Attending 1 Class (+1 Attended, +1 Total)'>+ Attend</button>" +
+              "<button class='sim-btn claim-btn' data-subject='" + encodeURIComponent(d.subject) + "' title='Simulate Claiming Duty/Medical Leave (+1 Attended, +0 Total)'>+ Claim</button>" +
+              "<button class='sim-btn miss-btn' data-subject='" + encodeURIComponent(d.subject) + "' title='Simulate Missing 1 Class (+0 Attended, +1 Total)'>- Miss</button>" +
             "</div>" : "") +
         "</li>";
     });
@@ -452,6 +453,18 @@ function displayPopup(data) {
       }
       window.attendanceSimulations[subject].attendedDelta += 1;
       window.attendanceSimulations[subject].totalDelta += 1;
+      displayPopup(data);
+    });
+  });
+
+  const claimBtns = popup.querySelectorAll('.sim-btn.claim-btn');
+  claimBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const subject = decodeURIComponent(btn.getAttribute('data-subject'));
+      if (!window.attendanceSimulations[subject]) {
+        window.attendanceSimulations[subject] = { attendedDelta: 0, totalDelta: 0 };
+      }
+      window.attendanceSimulations[subject].attendedDelta += 1; // Only numerator increases
       displayPopup(data);
     });
   });

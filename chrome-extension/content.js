@@ -534,6 +534,7 @@ function displayPopup(data) {
         setTimeout(() => {
           btn.textContent = originalText;
           btn.classList.remove('copied');
+        }, 1500);
       }).catch(err => {
         console.error('Failed to copy text: ', err);
       });

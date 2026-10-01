@@ -1,14 +1,14 @@
 #attendance-popup {
   /* Obsidian Glass - Light Theme (Default) */
-  --bg-color: #ffffff;
+  --bg-color: #f8fafc;
   --text-color: #0f172a;
-  --text-muted: #64748b;
-  --header-bg: rgba(248, 250, 252, 0.85);
-  --border-color: #e2e8f0;
-  --card-bg: #f8fafc;
+  --text-muted: #475569;
+  --header-bg: #ffffff;
+  --border-color: #cbd5e1;
+  --card-bg: #ffffff;
   --card-hover: #f1f5f9;
-  --card-border: #cbd5e1;
-  --summary-bg: #f1f5f9;
+  --card-border: #94a3b8;
+  --summary-bg: #ffffff;
   --danger-color: #e11d48;
   --danger-bg: #ffe4e6;
   --warning-color: #d97706;
@@ -18,12 +18,12 @@
   --accent-color: #4f46e5;
   --accent-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
   --btn-hover: #e2e8f0;
-  --badge-attend-bg: #e0f2fe;
-  --badge-attend-text: #0284c7;
-  --badge-leave-bg: #fef3c7;
-  --badge-leave-text: #b45309;
-  --scrollbar-track: #f1f5f9;
-  --scrollbar-thumb: #cbd5e1;
+  --badge-attend-bg: #0284c7;
+  --badge-attend-text: #ffffff;
+  --badge-leave-bg: #d97706;
+  --badge-leave-text: #ffffff;
+  --scrollbar-track: #e2e8f0;
+  --scrollbar-thumb: #94a3b8;
   
   position: fixed;
   top: 20px;
@@ -32,7 +32,7 @@
   color: var(--text-color);
   padding: 0;
   border-radius: 16px;
-  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 24px 50px -12px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(15, 23, 42, 0.08);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   z-index: 10000;
@@ -359,14 +359,16 @@
   border: 1px solid var(--card-border);
   border-radius: 12px;
   padding: 14px;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s ease, border-color 0.2s ease;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   box-sizing: border-box;
 }
 
 .subject-card:hover {
   transform: translateY(-2px);
   background: var(--card-hover);
-  border-color: rgba(255, 255, 255, 0.16);
+  border-color: var(--accent-color);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
 }
 
 .subject-card.warning-card {

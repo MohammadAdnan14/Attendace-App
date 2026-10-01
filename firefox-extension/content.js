@@ -1,22 +1,3 @@
-// Remove unsafe DOMPurify usage
-// ... existing code ...
-if (typeof browser === 'undefined') {
-  window.browser = chrome;
-}
-// ... existing code ...
-
-// Ensure the script runs after the page is fully loaded
-document.addEventListener('DOMContentLoaded', function() {
-  console.log('DOM Content Loaded - Initializing extension');
-  initializeExtension();
-});
-
-// Also run when the page is already loaded
-if (document.readyState === 'complete') {
-  console.log('Page already loaded - Initializing extension');
-  initializeExtension();
-}
-
 function calculateInsights() {
   console.log('Starting attendance calculation...');
   
@@ -98,9 +79,14 @@ function calculateInsights() {
       return;
     }
 
+    let belowThreshold = false;
+    let extraClasses = 0;
+    let directAttendance = 0;
+    let bunkable = 0;
     let message = "";
+
     if ((attended / total) * 100 < threshold) {
-      let extraClasses = 0;
+      belowThreshold = true;
       let tempAttended = attended;
       let tempTotal = total;
       
@@ -109,22 +95,19 @@ function calculateInsights() {
         tempTotal += 1;
         extraClasses += 1;
       }
-      const directAttendance = Math.ceil((threshold / 100) * total) - attended;
-      message = "⚠️ Attend " + extraClasses + " more classes (or get " + directAttendance + " attendance added) to cross " + threshold + "%";
+      directAttendance = Math.ceil((threshold / 100) * total) - attended;
     } else {
-      let bunkable = 0;
       let tempTotal = total;
-      
       while ((attended / tempTotal) * 100 >= threshold) {
         tempTotal += 1;
         bunkable += 1;
       }
       bunkable -= 1; // The last increment takes it below threshold
       message = percentage === 100
-        ? "😎 You can bunk " + bunkable + " classes and still stay above " + threshold + "%"
+        ? "😎 You can skip " + bunkable + " classes"
         : bunkable === 0 
-          ? "😅 You're right on edge, do not skip classes 😅"
-          : "✅ You can bunk " + bunkable + " classes and still stay above " + threshold + "%";
+          ? "😅 You're right on edge"
+          : "✅ You can skip " + bunkable + " classes";
     }
 
     results.push({ 
@@ -132,7 +115,11 @@ function calculateInsights() {
       percentage: percentage.toFixed(2), 
       message,
       attended,
-      total
+      total,
+      belowThreshold,
+      extraClasses,
+      directAttendance,
+      bunkable
     });
   });
 
@@ -146,9 +133,14 @@ function calculateOverallAttendance(data) {
   const percentage = (attended / total) * 100;
   const overallThreshold = 75; // Fixed threshold for overall attendance
   
+  let belowThreshold = false;
+  let requiredClasses = 0;
+  let directAttendance = 0;
+  let skippableClasses = 0;
   let message = "";
+
   if (percentage < overallThreshold) {
-    let requiredClasses = 0;
+    belowThreshold = true;
     let currentAttended = attended;
     let currentTotal = total;
     
@@ -157,143 +149,431 @@ function calculateOverallAttendance(data) {
       currentTotal++;
       requiredClasses++;
     }
-    const directAttendance = Math.ceil((overallThreshold / 100) * total) - attended;
-    message = "⚠️ Attend " + requiredClasses + " more classes (or get " + directAttendance + " attendance added) to reach " + overallThreshold + "%";
+    directAttendance = Math.ceil((overallThreshold / 100) * total) - attended;
   } else {
-    // Calculate skippable classes: (attended)/(total + x) = 0.75
-    // Solving for x: x = (attended/0.75) - total
-    const skippableClasses = Math.floor((attended / 0.75) - total);
+    skippableClasses = Math.floor((attended / 0.75) - total);
     message = percentage === 100
-      ? "😎 You can skip " + skippableClasses + " classes and still be above " + overallThreshold + "%"
+      ? "😎 You can skip " + skippableClasses + " classes"
       : skippableClasses === 0
-        ? "😅 You're right on edge, do not skip classes"
-        : "✅ You can skip " + skippableClasses + " classes and still be above " + overallThreshold + "%";
+        ? "😅 You're right on edge"
+        : "✅ You can skip " + skippableClasses + " classes";
   }
   
   return {
     percentage: percentage.toFixed(2),
-    message: message
+    belowThreshold,
+    requiredClasses,
+    directAttendance,
+    skippableClasses,
+    message,
+    total,
+    attended
   };
 }
 
+// Simulation state: maps subject name -> { attendedDelta: number, totalDelta: number }
+window.attendanceSimulations = window.attendanceSimulations || {};
+window.whatIfModeActive = window.whatIfModeActive || false;
+
 function displayPopup(data) {
-  // Remove existing popup if any
+  // Capture current scroll positions before removing existing popup
+  let bodyWrapperScroll = 0;
+  let subjectListScroll = 0;
   const existingPopup = document.getElementById('attendance-popup');
   if (existingPopup) {
+    const existingWrapper = existingPopup.querySelector('.popup-body-wrapper');
+    if (existingWrapper) bodyWrapperScroll = existingWrapper.scrollTop;
+    const existingList = existingPopup.querySelector('.subject-list');
+    if (existingList) subjectListScroll = existingList.scrollTop;
     existingPopup.remove();
   }
 
   const popup = document.createElement("div");
   popup.id = "attendance-popup";
 
+  // Restore states
+  const savedTheme = localStorage.getItem('attendance-theme') || 'light';
+  if (savedTheme === 'dark') {
+    popup.classList.add('dark-theme');
+  }
+  
+  const savedCollapsed = localStorage.getItem('attendance-collapsed') === 'true';
+  if (savedCollapsed) {
+    popup.classList.add('collapsed');
+  }
+
+  if (window.whatIfModeActive) {
+    popup.classList.add('whatif-active');
+  }
+
   if (data.length === 0) {
-    const heading = document.createElement("h3");
-    heading.textContent = "📊 Attendance Insights";
-    popup.appendChild(heading);
-
-    const message = document.createElement("p");
-    message.textContent = "No attendance data found. Please make sure:";
-    popup.appendChild(message);
-
-    const list = document.createElement("ul");
-    const items = [
-      "You're on the correct page",
-      "The attendance table is visible",
-      "You're logged in to the portal"
-    ];
-    
-    items.forEach(item => {
-      const li = document.createElement("li");
-      li.textContent = item;
-      list.appendChild(li);
-    });
-    popup.appendChild(list);
+    popup.innerHTML = 
+      "<div class='popup-header'>" +
+        "<div class='header-left'>" +
+          "<span class='header-icon'>📊</span>" +
+          "<h3>Attendance Insights</h3>" +
+        "</div>" +
+        "<div class='header-controls'>" +
+          "<button id='whatif-toggle' class='control-btn" + (window.whatIfModeActive ? " active" : "") + "' title='Toggle What-If Simulation'>🔮</button>" +
+          "<button id='theme-toggle' class='control-btn' title='Toggle Theme'>🌓</button>" +
+          "<button id='collapse-toggle' class='control-btn' title='Minimize'>➖</button>" +
+        "</div>" +
+      "</div>" +
+      "<div class='popup-body-wrapper'>" +
+        "<div class='error-view'>" +
+          "<p>No attendance data found. Please make sure:</p>" +
+          "<ul>" +
+            "<li>You're on the correct page</li>" +
+            "<li>The attendance table is visible</li>" +
+            "<li>You're logged in to the portal</li>" +
+          "</ul>" +
+        "</div>" +
+      "</div>";
   } else {
-    const overall = calculateOverallAttendance(data);
-    
-    const heading = document.createElement("h3");
-    heading.textContent = "📊 Attendance Insights";
-    popup.appendChild(heading);
-
-    const summary = document.createElement("div");
-    summary.className = "attendance-summary";
-    
-    const overallText = document.createElement("p");
-    overallText.textContent = "Overall Attendance: " + overall.percentage + "%";
-    summary.appendChild(overallText);
-
-    const message = document.createElement("p");
-    message.className = "overall-message";
-    message.textContent = overall.message;
-    summary.appendChild(message);
-    
-    popup.appendChild(summary);
-
-    const list = document.createElement("ul");
-    data.forEach(d => {
-      const li = document.createElement("li");
+    // Apply simulation deltas to data
+    let hasActiveSimulations = false;
+    const simulatedData = data.map(d => {
+      const sim = window.attendanceSimulations[d.subject] || { attendedDelta: 0, totalDelta: 0 };
+      if (sim.attendedDelta !== 0 || sim.totalDelta !== 0) {
+        hasActiveSimulations = true;
+      }
       
-      const subject = document.createElement("strong");
-      subject.textContent = d.subject;
-      li.appendChild(subject);
+      const effectiveAttended = Math.max(0, d.attended + sim.attendedDelta);
+      const effectiveTotal = Math.max(1, d.total + sim.totalDelta);
+      const effectivePercentage = (effectiveAttended / effectiveTotal) * 100;
+      const threshold = 60;
 
-      const details = document.createElement("div");
-      details.className = "attendance-details";
+      let belowThreshold = false;
+      let extraClasses = 0;
+      let directAttendance = 0;
+      let bunkable = 0;
+      let message = "";
 
-      const percentage = document.createElement("span");
-      percentage.className = "percentage" + (parseFloat(d.percentage) < 60 ? " low-attendance" : "");
-      percentage.textContent = d.percentage + "%";
-      details.appendChild(percentage);
+      if (effectivePercentage < threshold) {
+        belowThreshold = true;
+        let tempAttended = effectiveAttended;
+        let tempTotal = effectiveTotal;
+        while ((tempAttended / tempTotal) * 100 < threshold) {
+          tempAttended += 1;
+          tempTotal += 1;
+          extraClasses += 1;
+        }
+        directAttendance = Math.ceil((threshold / 100) * effectiveTotal) - effectiveAttended;
+      } else {
+        let tempTotal = effectiveTotal;
+        while ((effectiveAttended / tempTotal) * 100 >= threshold) {
+          tempTotal += 1;
+          bunkable += 1;
+        }
+        bunkable -= 1;
+        message = effectivePercentage === 100
+          ? "😎 You can skip " + bunkable + " classes"
+          : bunkable === 0 
+            ? "😅 You're right on edge"
+            : "✅ You can skip " + bunkable + " classes";
+      }
 
-      const count = document.createElement("span");
-      count.className = "count";
-      count.textContent = "(" + d.attended + "/" + d.total + ")";
-      details.appendChild(count);
-
-      const message = document.createElement("span");
-      message.className = "message";
-      message.textContent = d.message;
-      details.appendChild(message);
-
-      li.appendChild(details);
-      list.appendChild(li);
+      return {
+        ...d,
+        effectiveAttended,
+        effectiveTotal,
+        effectivePercentage: effectivePercentage.toFixed(2),
+        belowThreshold,
+        extraClasses,
+        directAttendance,
+        bunkable,
+        message,
+        attendedDelta: sim.attendedDelta,
+        totalDelta: sim.totalDelta
+      };
     });
-    popup.appendChild(list);
 
-    const funMessage = document.createElement("div");
-    funMessage.className = "fun-message";
-    funMessage.textContent = "Okie now bui me Cold Coffe! ☕";
-    popup.appendChild(funMessage);
+    const overall = calculateOverallAttendance(simulatedData.map(s => ({
+      ...s,
+      attended: s.effectiveAttended,
+      total: s.effectiveTotal
+    })));
+    
+    // Sort critical courses to the top so students spot them instantly
+    simulatedData.sort((a, b) => {
+      if (a.belowThreshold && !b.belowThreshold) return -1;
+      if (!a.belowThreshold && b.belowThreshold) return 1;
+      return parseFloat(a.effectivePercentage) - parseFloat(b.effectivePercentage);
+    });
+
+    let overallRecommendations = "";
+    if (overall.belowThreshold) {
+      overallRecommendations = 
+        "<div class='overall-recommendations'>" +
+          "<div class='rec-badge attend'>" +
+            "<span class='badge-label'>Attend:</span>" +
+            "<span class='badge-val'>+" + overall.requiredClasses + " classes</span>" +
+          "</div>" +
+          "<div class='rec-badge direct'>" +
+            "<span class='badge-label'>Claim Leave:</span>" +
+            "<span class='badge-val'>+" + overall.directAttendance + " present</span>" +
+          "</div>" +
+        "</div>";
+    } else {
+      overallRecommendations = "<p class='overall-message safe'>" + overall.message + " to stay above 75%</p>";
+    }
+
+    let html = 
+      "<div class='popup-header'>" +
+        "<div class='header-left'>" +
+          "<span class='header-icon'>📊</span>" +
+          "<h3>Attendance Insights</h3>" +
+        "</div>" +
+        "<div class='header-controls'>" +
+          "<button id='whatif-toggle' class='control-btn" + (window.whatIfModeActive ? " active" : "") + "' title='Toggle What-If Simulation'>🔮</button>" +
+          "<button id='theme-toggle' class='control-btn' title='Toggle Theme'>🌓</button>" +
+          "<button id='collapse-toggle' class='control-btn' title='Minimize'></button>" +
+        "</div>" +
+      "</div>" +
+      "<div class='popup-body-wrapper'>" +
+        "<div class='attendance-summary" + (hasActiveSimulations ? " sim-highlight" : "") + "'>" +
+          "<div class='summary-top'>" +
+            "<span class='summary-label'>Overall Attendance " + (hasActiveSimulations ? "<span class='sim-tag'>(SIMULATED)</span>" : "") + "</span>" +
+            "<span class='summary-value " + (overall.belowThreshold ? 'low-attendance' : '') + "'>" + overall.percentage + "%</span>" +
+          "</div>" +
+          "<div class='progress-bar-container'>" +
+            "<div class='progress-bar-fill' style='width: " + Math.min(100, Math.max(0, overall.percentage)) + "%'></div>" +
+          "</div>" +
+          overallRecommendations +
+          (hasActiveSimulations ? "<div class='reset-sim-wrapper'><button id='reset-sim-btn' class='reset-sim-btn'>🔄 Reset Simulation</button></div>" : "") +
+        "</div>" +
+        "<ul class='subject-list'>";
+    
+    simulatedData.forEach(d => {
+      let recHtml = "";
+      if (d.belowThreshold) {
+        recHtml = 
+          "<div class='recommendation-badges'>" +
+            "<span class='rec-badge-mini attend'>Attend: +" + d.extraClasses + "</span>" +
+            "<span class='rec-badge-mini direct'>Leave: +" + d.directAttendance + "</span>" +
+          "</div>";
+      } else {
+        recHtml = "<span class='safe-message'>" + d.message + "</span>";
+      }
+
+      const deltaText = d.totalDelta > 0 
+        ? `<span class='delta-tag'>(${d.attendedDelta >= 0 ? '+' + d.attendedDelta : d.attendedDelta}/${d.totalDelta >= 0 ? '+' + d.totalDelta : d.totalDelta})</span>`
+        : "";
+
+      const hasSubjectSimulation = (d.attendedDelta !== 0 || d.totalDelta !== 0);
+      const isFullAttendance = (d.effectiveAttended >= d.effectiveTotal);
+
+      html += 
+        "<li class='subject-card " + (d.belowThreshold ? 'warning-card' : '') + "'>" +
+          "<div class='subject-header'>" +
+            "<strong class='subject-title'>" + d.subject + "</strong>" +
+            "<span class='subject-percentage " + (d.belowThreshold ? "low-attendance" : "") + "'>" + d.effectivePercentage + "%</span>" +
+          "</div>" +
+          "<div class='subject-body'>" +
+            "<span class='count'>(" + d.effectiveAttended + "/" + d.effectiveTotal + " classes) " + deltaText + "</span>" +
+            recHtml +
+          "</div>" +
+          (window.whatIfModeActive ? 
+            "<div class='whatif-controls'>" +
+              "<span class='whatif-label'>Simulate:</span>" +
+              "<button class='sim-btn attend-btn' data-subject='" + encodeURIComponent(d.subject) + "' title='Simulate Attending 1 Class (+1 Attended, +1 Total)'>+ Attend</button>" +
+              "<button class='sim-btn claim-btn" + (isFullAttendance ? " disabled" : "") + "' data-subject='" + encodeURIComponent(d.subject) + "' data-is-full='" + isFullAttendance + "' title='" + (isFullAttendance ? "Attendance is already 100%. Cannot claim duty leave beyond total conducted classes." : "Simulate Claiming Duty/Medical Leave (+1 Attended, +0 Total)") + "'>+ Claim</button>" +
+              "<button class='sim-btn miss-btn' data-subject='" + encodeURIComponent(d.subject) + "' title='Simulate Missing 1 Class (+0 Attended, +1 Total)'>- Miss</button>" +
+              (hasSubjectSimulation ? "<button class='sim-btn reset-subject-btn' data-subject='" + encodeURIComponent(d.subject) + "' title='Reset simulation for this subject'>🔄 Reset</button>" : "") +
+            "</div>" : "") +
+        "</li>";
+    });
+
+    html += "</ul>" +
+      "<div class='popup-footer'>" +
+        "<button id='coffee-btn' class='coffee-btn'>☕ Support the Dev</button>" +
+        "<div id='donation-drawer' class='donation-drawer hidden'>" +
+          "<p class='donation-pitch'>If you like our work, kindly help or motivate us!</p>" +
+          
+          "<div class='donation-item'>" +
+            "<div class='donation-meta'>" +
+              "<span class='chain-title'>EVM Address (ETH/BSC/Polygon)</span>" +
+              "<span class='chain-note'>⚠️ Strictly send EVM chain tokens. Others will be lost.</span>" +
+            "</div>" +
+            "<div class='address-copy-container'>" +
+              "<input type='text' readonly class='address-input' value='0xC43947F88eC57D5d96A1A7C6d597c239677dE9B7'>" +
+              "<button class='copy-btn' data-address='0xC43947F88eC57D5d96A1A7C6d597c239677dE9B7'>Copy</button>" +
+            "</div>" +
+          "</div>" +
+
+          "<div class='donation-item'>" +
+            "<div class='donation-meta'>" +
+              "<span class='chain-title'>Solana Address</span>" +
+              "<span class='chain-note'>⚠️ Strictly send Solana network tokens. Others will be lost.</span>" +
+            "</div>" +
+            "<div class='address-copy-container'>" +
+              "<input type='text' readonly class='address-input' value='8LXB8CuiRQumccju3SGXtCFvPehEcARJkwTFAzKVqFtw'>" +
+              "<button class='copy-btn' data-address='8LXB8CuiRQumccju3SGXtCFvPehEcARJkwTFAzKVqFtw'>Copy</button>" +
+            "</div>" +
+          "</div>" +
+        "</div>" +
+      "</div>" +
+    "</div>";
+
+    popup.innerHTML = html;
   }
 
   document.body.appendChild(popup);
+
+  // Restore scroll positions seamlessly
+  const newWrapper = popup.querySelector('.popup-body-wrapper');
+  if (newWrapper && bodyWrapperScroll > 0) newWrapper.scrollTop = bodyWrapperScroll;
+  const newList = popup.querySelector('.subject-list');
+  if (newList && subjectListScroll > 0) newList.scrollTop = subjectListScroll;
+
+  // Setup event listeners after appending to DOM
+  const whatIfToggle = document.getElementById('whatif-toggle');
+  if (whatIfToggle) {
+    whatIfToggle.addEventListener('click', () => {
+      window.whatIfModeActive = !window.whatIfModeActive;
+      displayPopup(data);
+    });
+  }
+
+  const resetSimBtn = document.getElementById('reset-sim-btn');
+  if (resetSimBtn) {
+    resetSimBtn.addEventListener('click', () => {
+      window.attendanceSimulations = {};
+      displayPopup(data);
+    });
+  }
+
+  const attendBtns = popup.querySelectorAll('.sim-btn.attend-btn');
+  attendBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const subject = decodeURIComponent(btn.getAttribute('data-subject'));
+      if (!window.attendanceSimulations[subject]) {
+        window.attendanceSimulations[subject] = { attendedDelta: 0, totalDelta: 0 };
+      }
+      window.attendanceSimulations[subject].attendedDelta += 1;
+      window.attendanceSimulations[subject].totalDelta += 1;
+      displayPopup(data);
+    });
+  });
+
+  const claimBtns = popup.querySelectorAll('.sim-btn.claim-btn');
+  claimBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const isFull = btn.getAttribute('data-is-full') === 'true';
+      if (isFull) {
+        showToast("⚠️ Attendance is already 100%! You cannot claim duty/medical leave beyond conducted classes.");
+        return;
+      }
+      const subject = decodeURIComponent(btn.getAttribute('data-subject'));
+      if (!window.attendanceSimulations[subject]) {
+        window.attendanceSimulations[subject] = { attendedDelta: 0, totalDelta: 0 };
+      }
+      window.attendanceSimulations[subject].attendedDelta += 1; // Only numerator increases
+      displayPopup(data);
+    });
+  });
+
+  const missBtns = popup.querySelectorAll('.sim-btn.miss-btn');
+  missBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const subject = decodeURIComponent(btn.getAttribute('data-subject'));
+      if (!window.attendanceSimulations[subject]) {
+        window.attendanceSimulations[subject] = { attendedDelta: 0, totalDelta: 0 };
+      }
+      window.attendanceSimulations[subject].totalDelta += 1;
+      displayPopup(data);
+    });
+  });
+
+  const resetSubjectBtns = popup.querySelectorAll('.sim-btn.reset-subject-btn');
+  resetSubjectBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const subject = decodeURIComponent(btn.getAttribute('data-subject'));
+      delete window.attendanceSimulations[subject];
+      displayPopup(data);
+    });
+  });
+
+  const themeToggle = document.getElementById('theme-toggle');
+  if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+      popup.classList.toggle('dark-theme');
+      const currentTheme = popup.classList.contains('dark-theme') ? 'dark' : 'light';
+      localStorage.setItem('attendance-theme', currentTheme);
+    });
+  }
+
+  const collapseToggle = document.getElementById('collapse-toggle');
+  if (collapseToggle) {
+    collapseToggle.textContent = popup.classList.contains('collapsed') ? "➕" : "➖";
+    collapseToggle.addEventListener('click', () => {
+      popup.classList.toggle('collapsed');
+      const isCollapsed = popup.classList.contains('collapsed');
+      localStorage.setItem('attendance-collapsed', isCollapsed);
+      collapseToggle.textContent = isCollapsed ? "➕" : "➖";
+    });
+  }
+
+  const coffeeBtn = document.getElementById('coffee-btn');
+  const donationDrawer = document.getElementById('donation-drawer');
+  if (coffeeBtn && donationDrawer) {
+    coffeeBtn.addEventListener('click', () => {
+      donationDrawer.classList.toggle('hidden');
+      coffeeBtn.classList.toggle('active');
+    });
+  }
+
+  const copyButtons = popup.querySelectorAll('.copy-btn');
+  copyButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const address = btn.getAttribute('data-address');
+      navigator.clipboard.writeText(address).then(() => {
+        const originalText = btn.textContent;
+        btn.textContent = "Copied!";
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.classList.remove('copied');
+        }, 1500);
+      }).catch(err => {
+        console.error('Failed to copy text: ', err);
+      });
+    });
+  });
+}
+
+function showToast(message) {
+  let toast = document.getElementById('attendance-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'attendance-toast';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.classList.add('show');
+  if (window.toastTimeout) clearTimeout(window.toastTimeout);
+  window.toastTimeout = setTimeout(() => {
+    toast.classList.remove('show');
+  }, 2500);
 }
 
 // Wait for the page to be fully loaded
 function initializeExtension() {
-  console.log('Initializing extension...');
-  
-  // Clear any existing timeouts
   if (window.attendanceTimeout) {
     clearTimeout(window.attendanceTimeout);
   }
   
-  // Try to run the calculation after a short delay to ensure the page is loaded
   window.attendanceTimeout = setTimeout(() => {
-    console.log('Running initial calculation...');
     calculateInsights();
   }, 1000);
   
-  // Set up a mutation observer to watch for table changes
   const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-        // Check if the added nodes contain our target table
         const hasTable = Array.from(mutation.addedNodes).some(node => 
           node.nodeType === 1 && node.matches('table')
         );
         if (hasTable) {
-          console.log('Table change detected, recalculating...');
           calculateInsights();
           break;
         }
@@ -301,16 +581,14 @@ function initializeExtension() {
     }
   });
 
-  // Start observing the document body for changes
   observer.observe(document.body, {
     childList: true,
     subtree: true
   });
 }
 
-// Run when the page is ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initializeExtension);
 } else {
   initializeExtension();
-} 
+}

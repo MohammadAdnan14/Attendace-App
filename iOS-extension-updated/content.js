@@ -196,16 +196,22 @@ function displayPopup(data) {
   const popup = document.createElement("div");
   popup.id = "attendance-popup";
 
-  // Restore states
-  const savedTheme = localStorage.getItem('attendance-theme') || 'light';
-  if (savedTheme === 'dark') {
-    popup.classList.add('dark-theme');
-  }
-  
-  const savedCollapsed = localStorage.getItem('attendance-collapsed') === 'true';
-  if (savedCollapsed) {
-    popup.classList.add('collapsed');
-  }
+  // Restore states using Storage helper (or initial state)
+  Storage.get('attendance-theme', 'light', function(savedTheme) {
+    if (savedTheme === 'dark') {
+      popup.classList.add('dark-theme');
+    }
+  });
+
+  Storage.get('attendance-collapsed', 'false', function(savedCollapsed) {
+    if (savedCollapsed === 'true' || savedCollapsed === true) {
+      popup.classList.add('collapsed');
+    }
+    const collapseBtn = popup.querySelector('#collapse-toggle');
+    if (collapseBtn) {
+      collapseBtn.textContent = popup.classList.contains('collapsed') ? "➕" : "➖";
+    }
+  });
 
   if (window.whatIfModeActive) {
     popup.classList.add('whatif-active');
@@ -504,7 +510,7 @@ function displayPopup(data) {
     themeToggle.addEventListener('click', () => {
       popup.classList.toggle('dark-theme');
       const currentTheme = popup.classList.contains('dark-theme') ? 'dark' : 'light';
-      localStorage.setItem('attendance-theme', currentTheme);
+      Storage.set('attendance-theme', currentTheme);
     });
   }
 
@@ -514,7 +520,7 @@ function displayPopup(data) {
     collapseToggle.addEventListener('click', () => {
       popup.classList.toggle('collapsed');
       const isCollapsed = popup.classList.contains('collapsed');
-      localStorage.setItem('attendance-collapsed', isCollapsed);
+      Storage.set('attendance-collapsed', isCollapsed ? 'true' : 'false');
       collapseToggle.textContent = isCollapsed ? "➕" : "➖";
     });
   }
@@ -547,6 +553,37 @@ function displayPopup(data) {
   });
 }
 
+// Cross-browser storage helper with fallback to localStorage
+const Storage = {
+  get: function(key, defaultValue, callback) {
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.get([key], function(result) {
+        callback(result[key] !== undefined ? result[key] : defaultValue);
+      });
+    } else if (typeof browser !== 'undefined' && browser.storage && browser.storage.local) {
+      browser.storage.local.get([key]).then(function(result) {
+        callback(result[key] !== undefined ? result[key] : defaultValue);
+      });
+    } else {
+      const val = localStorage.getItem(key);
+      callback(val !== null ? val : defaultValue);
+    }
+  },
+  set: function(key, value) {
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      const obj = {};
+      obj[key] = value;
+      chrome.storage.local.set(obj);
+    } else if (typeof browser !== 'undefined' && browser.storage && browser.storage.local) {
+      const obj = {};
+      obj[key] = value;
+      browser.storage.local.set(obj);
+    } else {
+      localStorage.setItem(key, value);
+    }
+  }
+};
+
 function showToast(message) {
   let toast = document.getElementById('attendance-toast');
   if (!toast) {
@@ -562,7 +599,7 @@ function showToast(message) {
   }, 2500);
 }
 
-// Wait for the page to be fully loaded
+// Wait for the page to be fully loaded with debounced observer
 function initializeExtension() {
   if (window.attendanceTimeout) {
     clearTimeout(window.attendanceTimeout);
@@ -570,19 +607,28 @@ function initializeExtension() {
   
   window.attendanceTimeout = setTimeout(() => {
     calculateInsights();
-  }, 1000);
+  }, 500);
   
   const observer = new MutationObserver((mutations) => {
+    let shouldRecalculate = false;
     for (const mutation of mutations) {
       if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
         const hasTable = Array.from(mutation.addedNodes).some(node => 
-          node.nodeType === 1 && node.matches('table')
+          node.nodeType === 1 && (node.matches('table') || node.querySelector('table'))
         );
         if (hasTable) {
-          calculateInsights();
+          shouldRecalculate = true;
           break;
         }
       }
+    }
+    if (shouldRecalculate) {
+      if (window.attendanceDebounceTimeout) {
+        clearTimeout(window.attendanceDebounceTimeout);
+      }
+      window.attendanceDebounceTimeout = setTimeout(() => {
+        calculateInsights();
+      }, 300);
     }
   });
 

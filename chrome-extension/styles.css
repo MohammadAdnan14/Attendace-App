@@ -20,8 +20,10 @@
   --btn-hover: #e2e8f0;
   --badge-attend-bg: #0284c7;
   --badge-attend-text: #ffffff;
-  --badge-leave-bg: #d97706;
+  --badge-attend-border: #0284c7;
+  --badge-leave-bg: #475569;
   --badge-leave-text: #ffffff;
+  --badge-leave-border: #475569;
   --scrollbar-track: #e2e8f0;
   --scrollbar-thumb: #94a3b8;
   
@@ -68,8 +70,10 @@
   --btn-hover: rgba(255, 255, 255, 0.1);
   --badge-attend-bg: rgba(56, 189, 248, 0.15);
   --badge-attend-text: #38bdf8;
-  --badge-leave-bg: rgba(245, 158, 11, 0.15);
-  --badge-leave-text: #fbbf24;
+  --badge-attend-border: rgba(56, 189, 248, 0.25);
+  --badge-leave-bg: rgba(148, 163, 184, 0.15);
+  --badge-leave-text: #cbd5e1;
+  --badge-leave-border: rgba(148, 163, 184, 0.25);
   --scrollbar-track: rgba(0, 0, 0, 0.2);
   --scrollbar-thumb: rgba(255, 255, 255, 0.2);
   
@@ -114,9 +118,7 @@
   margin: 0;
   font-size: 1.05rem;
   font-weight: 700;
-  background: var(--accent-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--text-color);
   letter-spacing: -0.01em;
 }
 
@@ -219,7 +221,7 @@
 
 .sim-tag {
   font-size: 0.7rem;
-  background: var(--accent-gradient);
+  background: var(--accent-color);
   color: #ffffff;
   padding: 2px 6px;
   border-radius: 4px;
@@ -232,12 +234,10 @@
   font-weight: 800;
   letter-spacing: -0.02em;
   color: var(--success-color);
-  text-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
 }
 
 .summary-value.low-attendance {
   color: var(--danger-color);
-  text-shadow: 0 0 12px rgba(244, 63, 94, 0.3);
 }
 
 .progress-bar-container {
@@ -253,14 +253,14 @@
 }
 
 .progress-bar-fill {
-  background: var(--accent-gradient);
+  background: var(--success-color);
   height: 100%;
   border-radius: 99px;
   transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .attendance-summary:has(.low-attendance) .progress-bar-fill {
-  background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+  background: var(--danger-color);
 }
 
 .overall-recommendations {
@@ -279,19 +279,18 @@
   font-size: 0.8em;
   font-weight: 500;
   box-sizing: border-box;
-  backdrop-filter: blur(8px);
 }
 
 .rec-badge.attend {
   background: var(--badge-attend-bg);
   color: var(--badge-attend-text);
-  border: 1px solid rgba(56, 189, 248, 0.2);
+  border: 1px solid var(--badge-attend-border);
 }
 
 .rec-badge.direct {
   background: var(--badge-leave-bg);
   color: var(--badge-leave-text);
-  border: 1px solid rgba(245, 158, 11, 0.2);
+  border: 1px solid var(--badge-leave-border);
 }
 
 .badge-label {
@@ -432,11 +431,13 @@
 .rec-badge-mini.attend {
   background: var(--badge-attend-bg);
   color: var(--badge-attend-text);
+  border: 1px solid var(--badge-attend-border);
 }
 
 .rec-badge-mini.direct {
   background: var(--badge-leave-bg);
   color: var(--badge-leave-text);
+  border: 1px solid var(--badge-leave-border);
 }
 
 .safe-message {

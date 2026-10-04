@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
-  "name": "Attendance Insights",
+  "name": "RBU Attendance Planner",
   "version": "1.0",
-  "description": "Track and analyze your attendance with detailed insights",
+  "description": "Smart attendance calculator & What-If simulator for RBU students. Calculate bunkable classes, simulate upcoming sessions, plan duty leaves, and track goals in sleek Dark & Light themes.",
   "icons": {
     "48": "icon48.png",
     "128": "icon128.png"

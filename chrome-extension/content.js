@@ -217,7 +217,7 @@ function displayPopup(data) {
       "<div class='popup-header'>" +
         "<div class='header-left'>" +
           "<span class='header-icon'>📊</span>" +
-          "<h3>Attendance Insights</h3>" +
+          "<h3>RBU Attendance Planner</h3>" +
         "</div>" +
         "<div class='header-controls'>" +
           "<button id='whatif-toggle' class='control-btn" + (window.whatIfModeActive ? " active" : "") + "' title='Toggle What-If Simulation'>🔮</button>" +
@@ -328,7 +328,7 @@ function displayPopup(data) {
       "<div class='popup-header'>" +
         "<div class='header-left'>" +
           "<span class='header-icon'>📊</span>" +
-          "<h3>Attendance Insights</h3>" +
+          "<h3>RBU Attendance Planner</h3>" +
         "</div>" +
         "<div class='header-controls'>" +
           "<button id='whatif-toggle' class='control-btn" + (window.whatIfModeActive ? " active" : "") + "' title='Toggle What-If Simulation'>🔮</button>" +

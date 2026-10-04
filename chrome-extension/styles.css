@@ -21,9 +21,9 @@
   --badge-attend-bg: #0284c7;
   --badge-attend-text: #ffffff;
   --badge-attend-border: #0284c7;
-  --badge-leave-bg: #475569;
+  --badge-leave-bg: #0d9488;
   --badge-leave-text: #ffffff;
-  --badge-leave-border: #475569;
+  --badge-leave-border: #0d9488;
   --scrollbar-track: #e2e8f0;
   --scrollbar-thumb: #94a3b8;
   
@@ -70,10 +70,10 @@
   --btn-hover: rgba(255, 255, 255, 0.1);
   --badge-attend-bg: rgba(56, 189, 248, 0.15);
   --badge-attend-text: #38bdf8;
-  --badge-attend-border: rgba(56, 189, 248, 0.25);
-  --badge-leave-bg: rgba(148, 163, 184, 0.15);
-  --badge-leave-text: #cbd5e1;
-  --badge-leave-border: rgba(148, 163, 184, 0.25);
+  --badge-attend-border: rgba(56, 189, 248, 0.3);
+  --badge-leave-bg: rgba(45, 212, 191, 0.15);
+  --badge-leave-text: #2dd4bf;
+  --badge-leave-border: rgba(45, 212, 191, 0.3);
   --scrollbar-track: rgba(0, 0, 0, 0.2);
   --scrollbar-thumb: rgba(255, 255, 255, 0.2);
   

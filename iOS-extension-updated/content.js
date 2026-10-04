@@ -403,23 +403,23 @@ function displayPopup(data) {
           
           "<div class='donation-item'>" +
             "<div class='donation-meta'>" +
-              "<span class='chain-title'>EVM Address (ETH/BSC/Polygon)</span>" +
-              "<span class='chain-note'>⚠️ Strictly send EVM chain tokens. Others will be lost.</span>" +
-              "</div>" +
+              "<span class='chain-title'>Solana Address (Primary)</span>" +
+              "<span class='chain-note'>⚠️ Strictly send Solana network tokens. Others will be lost.</span>" +
+            "</div>" +
             "<div class='address-copy-container'>" +
-              "<input type='text' readonly class='address-input' value='0xC43947F88eC57D5d96A1A7C6d597c239677dE9B7'>" +
-              "<button class='copy-btn' data-address='0xC43947F88eC57D5d96A1A7C6d597c239677dE9B7'>Copy</button>" +
+              "<input type='text' readonly class='address-input' value='9k2gaQoScaFBJfWGBQHX8ziqkuqJB8Un3F2RXS4D4QBY'>" +
+              "<button class='copy-btn' data-address='9k2gaQoScaFBJfWGBQHX8ziqkuqJB8Un3F2RXS4D4QBY'>Copy</button>" +
             "</div>" +
           "</div>" +
 
           "<div class='donation-item'>" +
             "<div class='donation-meta'>" +
-              "<span class='chain-title'>Solana Address</span>" +
-              "<span class='chain-note'>⚠️ Strictly send Solana network tokens. Others will be lost.</span>" +
-            "</div>" +
+              "<span class='chain-title'>EVM Address (ETH/BSC/Polygon)</span>" +
+              "<span class='chain-note'>⚠️ Strictly send EVM chain tokens. Others will be lost.</span>" +
+              "</div>" +
             "<div class='address-copy-container'>" +
-              "<input type='text' readonly class='address-input' value='8LXB8CuiRQumccju3SGXtCFvPehEcARJkwTFAzKVqFtw'>" +
-              "<button class='copy-btn' data-address='8LXB8CuiRQumccju3SGXtCFvPehEcARJkwTFAzKVqFtw'>Copy</button>" +
+              "<input type='text' readonly class='address-input' value='0x613e296fe5c586440a01f12e7a1b94671af2987c'>" +
+              "<button class='copy-btn' data-address='0x613e296fe5c586440a01f12e7a1b94671af2987c'>Copy</button>" +
             "</div>" +
           "</div>" +
         "</div>" +

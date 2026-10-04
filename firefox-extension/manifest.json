@@ -5,6 +5,7 @@
   "description": "Smart attendance calculator & What-If simulator for RBU students. Calculate bunkable classes, simulate upcoming sessions, plan duty leaves, and track goals in sleek Dark & Light themes.",
   "license" : "MIT",
   "icons": {
+    "16": "icon16.png",
     "48": "icon48.png",
     "128": "icon128.png"
   },
@@ -21,6 +22,7 @@
     "*://rcoem.in/*"
   ],
   "web_accessible_resources": [
+    "icon16.png",
     "icon48.png",
     "icon128.png"
   ],

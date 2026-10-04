@@ -83,12 +83,20 @@
 /* Collapsed State Styles */
 #attendance-popup.collapsed {
   max-height: 54px;
-  width: 270px;
+  width: 315px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
 #attendance-popup.collapsed .popup-body-wrapper {
   display: none;
+}
+
+#attendance-popup.collapsed .popup-header {
+  padding: 10px 14px;
+}
+
+#attendance-popup.collapsed .popup-header h3 {
+  font-size: 0.92rem;
 }
 
 .popup-header {
@@ -107,24 +115,34 @@
 .header-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
 }
 
 .header-icon {
   font-size: 1.2em;
+  flex-shrink: 0;
+  line-height: 1;
 }
 
 .popup-header h3 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 1.02rem;
   font-weight: 700;
   color: var(--text-color);
   letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .header-controls {
   display: flex;
   gap: 6px;
+  flex-shrink: 0;
+  margin-left: 8px;
 }
 
 .control-btn {

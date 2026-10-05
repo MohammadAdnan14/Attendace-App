@@ -37,12 +37,12 @@ jobs:
 
       - name: Build macOS App Bundle
         run: |
-          # Automatically detect macOS scheme
-          SCHEME=$(xcodebuild -project "$PROJECT_PATH" -list | grep -E "macOS" | head -n 1 | sed 's/^[[:space:]]*//')
+          # Automatically detect the exact scheme name from xcodebuild -list
+          SCHEME=$(xcodebuild -project "$PROJECT_PATH" -list | awk '/Schemes:/{flag=1; next} flag && /^[[:space:]]*[^[:space:]]/{gsub(/^[[:space:]]+|[[:space:]]+$/, ""); print; exit}')
           if [ -z "$SCHEME" ]; then
-            SCHEME="RBU Attendance Planner (macOS)"
+            SCHEME="RBU Attendance Planner"
           fi
-          echo "Using scheme: $SCHEME"
+          echo "Using scheme: '$SCHEME'"
 
           xcodebuild -project "$PROJECT_PATH" \
             -scheme "$SCHEME" \

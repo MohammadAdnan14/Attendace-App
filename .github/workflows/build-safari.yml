@@ -20,42 +20,25 @@ jobs:
         run: |
           mkdir -p SafariApp
           yes | xcrun safari-web-extension-converter iOS-extension-updated \
-            --app-name "RBU Attendance Planner" \
-            --bundle-identifier "com.rbu" \
+            --app-name "RBUAttendancePlanner" \
+            --bundle-identifier "com.rbu.RBUAttendancePlanner" \
             --swift \
             --macos-only \
             --copy-resources \
             --no-open \
             --project-location "$GITHUB_WORKSPACE/SafariApp"
 
-      - name: Inspect and Fix Bundle Identifiers
+      - name: Inspect generated Xcode project
         run: |
           PROJECT_PATH=$(find SafariApp -name "*.xcodeproj" -maxdepth 2 | head -n 1)
           echo "PROJECT_PATH=$PROJECT_PATH" >> $GITHUB_ENV
           echo "Detected project at: $PROJECT_PATH"
-
-          PBXPROJ="$PROJECT_PATH/project.pbxproj"
-          # Get parent app bundle identifier
-          PARENT_BUNDLE_ID=$(grep -E 'PRODUCT_BUNDLE_IDENTIFIER = com\.' "$PBXPROJ" | grep -v 'Extension' | head -n 1 | awk '{print $3}' | tr -d '";')
-          echo "Parent Bundle Identifier: $PARENT_BUNDLE_ID"
-          if [ -n "$PARENT_BUNDLE_ID" ]; then
-            # Ensure the extension's bundle identifier is strictly prefixed by the parent app's identifier
-            sed -i '' "s/PRODUCT_BUNDLE_IDENTIFIER = .*\.Extension;/PRODUCT_BUNDLE_IDENTIFIER = \"${PARENT_BUNDLE_ID}.Extension\";/g" "$PBXPROJ"
-          fi
-
           xcodebuild -project "$PROJECT_PATH" -list
 
       - name: Build macOS App Bundle
         run: |
-          # Automatically detect the exact scheme name from xcodebuild -list
-          SCHEME=$(xcodebuild -project "$PROJECT_PATH" -list | awk '/Schemes:/{flag=1; next} flag && /^[[:space:]]*[^[:space:]]/{gsub(/^[[:space:]]+|[[:space:]]+$/, ""); print; exit}')
-          if [ -z "$SCHEME" ]; then
-            SCHEME="RBU Attendance Planner"
-          fi
-          echo "Using scheme: '$SCHEME'"
-
           xcodebuild -project "$PROJECT_PATH" \
-            -scheme "$SCHEME" \
+            -scheme "RBUAttendancePlanner" \
             -configuration Release \
             -derivedDataPath derived_data \
             CODE_SIGNING_ALLOWED=NO \

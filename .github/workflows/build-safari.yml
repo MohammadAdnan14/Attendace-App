@@ -1,0 +1,69 @@
+name: Build Safari Extension (.app)
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ "**" ]
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    name: Compile macOS Safari Extension (.app)
+    runs-on: macos-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Convert Web Extension to Xcode Project
+        run: |
+          xcrun safari-web-extension-converter iOS-extension-updated \
+            --no-prompt \
+            --no-open \
+            --swift \
+            --app-name "RBU Attendance Planner" \
+            --bundle-identifier "com.rbu.attendance" \
+            --output-directory SafariApp
+
+      - name: Inspect generated Xcode project
+        run: |
+          PROJECT_PATH=$(find SafariApp -name "*.xcodeproj" -maxdepth 2 | head -n 1)
+          echo "PROJECT_PATH=$PROJECT_PATH" >> $GITHUB_ENV
+          echo "Detected project at: $PROJECT_PATH"
+          xcodebuild -project "$PROJECT_PATH" -list
+
+      - name: Build macOS App Bundle
+        run: |
+          # Automatically detect macOS scheme
+          SCHEME=$(xcodebuild -project "$PROJECT_PATH" -list | grep -E "macOS" | head -n 1 | sed 's/^[[:space:]]*//')
+          if [ -z "$SCHEME" ]; then
+            SCHEME="RBU Attendance Planner (macOS)"
+          fi
+          echo "Using scheme: $SCHEME"
+
+          xcodebuild -project "$PROJECT_PATH" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -derivedDataPath derived_data \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Package macOS .app into Zip
+        run: |
+          APP_PATH=$(find derived_data/Build/Products/Release -name "*.app" -maxdepth 2 | head -n 1)
+          echo "Found app at: $APP_PATH"
+          APP_DIR=$(dirname "$APP_PATH")
+          APP_NAME=$(basename "$APP_PATH")
+          cd "$APP_DIR"
+          zip -r "RBU-Attendance-Planner-macOS.zip" "$APP_NAME"
+          mv "RBU-Attendance-Planner-macOS.zip" "$GITHUB_WORKSPACE/"
+
+      - name: Upload macOS App Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RBU-Attendance-Planner-macOS
+          path: RBU-Attendance-Planner-macOS.zip
+          retention-days: 14

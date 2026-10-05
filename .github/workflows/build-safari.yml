@@ -18,13 +18,15 @@ jobs:
 
       - name: Convert Web Extension to Xcode Project
         run: |
-          xcrun safari-web-extension-converter iOS-extension-updated \
-            --no-prompt \
-            --no-open \
-            --swift \
+          mkdir -p SafariApp
+          yes | xcrun safari-web-extension-converter iOS-extension-updated \
             --app-name "RBU Attendance Planner" \
             --bundle-identifier "com.rbu.attendance" \
-            --output-directory SafariApp
+            --swift \
+            --macos-only \
+            --copy-resources \
+            --no-open \
+            --project-location "$GITHUB_WORKSPACE/SafariApp"
 
       - name: Inspect generated Xcode project
         run: |

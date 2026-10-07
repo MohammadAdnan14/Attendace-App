@@ -179,7 +179,6 @@ function calculateOverallAttendance(data) {
 // Simulation state: maps subject name -> { attendedDelta: number, totalDelta: number }
 window.attendanceSimulations = window.attendanceSimulations || {};
 window.whatIfModeActive = window.whatIfModeActive || false;
-window.frozenSubjectOrder = window.frozenSubjectOrder || null;
 
 function displayPopup(data) {
   // Capture current scroll positions before removing existing popup
@@ -306,33 +305,12 @@ function displayPopup(data) {
       total: s.effectiveTotal
     })));
     
-    // Freeze subject order during simulation so cards don't jump around under the user's cursor
-    if (!hasActiveSimulations && !window.whatIfModeActive) {
-      // Normal mode: sort critical courses to the top so students spot them instantly
-      simulatedData.sort((a, b) => {
-        if (a.belowThreshold && !b.belowThreshold) return -1;
-        if (!a.belowThreshold && b.belowThreshold) return 1;
-        return parseFloat(a.effectivePercentage) - parseFloat(b.effectivePercentage);
-      });
-      // Save this baseline order
-      window.frozenSubjectOrder = simulatedData.map(s => s.subject);
-    } else if (window.frozenSubjectOrder && window.frozenSubjectOrder.length > 0) {
-      // Simulation active: strictly preserve the frozen baseline order
-      simulatedData.sort((a, b) => {
-        const indexA = window.frozenSubjectOrder.indexOf(a.subject);
-        const indexB = window.frozenSubjectOrder.indexOf(b.subject);
-        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-        return 0;
-      });
-    } else {
-      // Fallback if no frozen order saved yet
-      simulatedData.sort((a, b) => {
-        if (a.belowThreshold && !b.belowThreshold) return -1;
-        if (!a.belowThreshold && b.belowThreshold) return 1;
-        return parseFloat(a.effectivePercentage) - parseFloat(b.effectivePercentage);
-      });
-      window.frozenSubjectOrder = simulatedData.map(s => s.subject);
-    }
+    // Sort critical courses to the top so students spot them instantly
+    simulatedData.sort((a, b) => {
+      if (a.belowThreshold && !b.belowThreshold) return -1;
+      if (!a.belowThreshold && b.belowThreshold) return 1;
+      return parseFloat(a.effectivePercentage) - parseFloat(b.effectivePercentage);
+    });
 
     let overallRecommendations = "";
     if (overall.belowThreshold) {
@@ -464,7 +442,6 @@ function displayPopup(data) {
   if (resetSimBtn) {
     resetSimBtn.addEventListener('click', () => {
       window.attendanceSimulations = {};
-      window.frozenSubjectOrder = null;
       displayPopup(data);
     });
   }

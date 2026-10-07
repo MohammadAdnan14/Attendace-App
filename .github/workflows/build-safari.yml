@@ -19,7 +19,7 @@ jobs:
       - name: Convert Web Extension to Xcode Project
         run: |
           mkdir -p SafariApp
-          yes | xcrun safari-web-extension-converter iOS-extension-updated \
+          yes | xcrun safari-web-extension-converter iOS-extension \
             --app-name "RBUAttendancePlanner" \
             --bundle-identifier "com.rbu.RBUAttendancePlanner" \
             --swift \

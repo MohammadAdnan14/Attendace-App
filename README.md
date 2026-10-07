@@ -18,13 +18,13 @@ While college ERP portals display static attendance numbers, **RBU Attendance Pl
 - **Threshold Analytics**: Automatically evaluates whether your overall and individual course attendance is above the university threshold (75% / 60%).
 - **Actionable Badges**:
   - **Attend: +X**: Shows the exact consecutive classes needed to lift attendance above 75%.
-  - **Claim Leave: +X**: Calculates how many Duty / Medical Leave certificates (OD) you need to submit to hit the target.
+  - **Claim Leave: +X**: Calculates how many Medical Leave certificates you need to submit to hit the target.
   - **Safe Margin**: Clearly displays: *"You can safely skip X classes"* when you are comfortably above the threshold.
 
 ### 2. 🔮 Interactive "What-If" Simulation Engine
 - Test theoretical attendance scenarios in real-time before making decisions:
   - `+ Attend`: Simulates attending the next upcoming class (+1 attended, +1 total).
-  - `+ Claim`: Simulates claiming an approved duty/medical leave (+1 attended, +0 total).
+  - `+ Claim`: Simulates claiming an approved medical leave (+1 attended, +0 total).
   - `- Miss`: Simulates missing an upcoming lecture (+0 attended, +1 total).
 - **Instant Live Feedback**: Recomputes overall percentage and course targets on the fly.
 - **Granular Undo & Reset**: Step backwards through simulations with per-subject and global `Undo` / `Reset` actions.
@@ -50,7 +50,7 @@ While college ERP portals display static attendance numbers, **RBU Attendance Pl
 | :--- | :--- | :--- | :--- |
 | **Google Chrome** | Chromium / Blink | Manifest V3 | `chrome-extension/` |
 | **Mozilla Firefox** | Gecko | Manifest V2/V3 | `firefox-extension/` |
-| **Apple Safari (iOS / macOS)** | WebKit | Safari Web Extension | `iOS-extension-updated/` |
+| **Apple Safari (iOS / macOS)** | WebKit | Safari Web Extension | `iOS-extension/` |
 
 ---
 
@@ -74,7 +74,7 @@ While college ERP portals display static attendance numbers, **RBU Attendance Pl
 ### Apple Safari (iOS / iPadOS / macOS)
 1. Open the project in Xcode using the Safari Web Extension converter:
    ```bash
-   xcrun safari-web-extension-converter iOS-extension-updated/
+   xcrun safari-web-extension-converter iOS-extension/
    ```
 2. Build and run on your target iOS device or simulator.
 
@@ -88,17 +88,18 @@ While college ERP portals display static attendance numbers, **RBU Attendance Pl
 2. **Skippable Classes Margin ($Bunkable$)**:
    $$\text{Skippable Classes} = \left\lfloor \frac{\text{Attended}}{0.75} \right\rfloor - \text{Total}$$
 
-3. **Duty / Medical Leave Direct Credit**:
+3. **Medical Leave Direct Credit**:
    $$\text{Claimable Absences} = \left\lceil \frac{T \cdot \text{Total}}{100} \right\rceil - \text{Attended}$$
 
 ---
 
-## ☕ Support the Developer
+## 🧋 Buy me a Cold Brew
 
-If this tool helped you save your semester attendance or plan your bunk days wisely, consider supporting the maintenance and store developer fees:
+If this tool helped you save your semester attendance or plan your bunk days wisely, consider buying me a cold brew to support maintenance and store developer fees via UPI (Google Pay / PhonePe / Paytm).
 
-- **Solana (SOL)**: `9k2gaQoScaFBJfWGBQHX8ziqkuqJB8Un3F2RXS4D4QBY`
-- **EVM (ETH / BSC / Polygon)**: `0x613e296fe5c586440a01f12e7a1b94671af2987c`
+<p align="center">
+  <img src="chrome-extension/qr.png" alt="UPI QR Code" width="180" />
+</p>
 
 ---
 

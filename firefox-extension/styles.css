@@ -475,7 +475,7 @@
   margin-top: 8px;
 }
 
-/* Footer & Crypto Donation Drawer */
+/* Footer & Buy Me a Cold Brew Drawer */
 .popup-footer {
   border-top: 1px solid var(--border-color);
   padding-top: 14px;
@@ -485,45 +485,112 @@
 }
 
 .coffee-btn {
-  background: var(--card-bg);
+  background: #eef2f6;
   color: var(--text-color);
-  border: 1px solid var(--card-border);
+  border: 1px solid #cbd5e1;
   padding: 10px 14px;
   border-radius: 10px;
   cursor: pointer;
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.84rem;
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 8px;
   width: 100%;
-  transition: all 0.2s ease;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
   box-sizing: border-box;
+  user-select: none;
+  position: relative;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+
+.coffee-btn .coffee-icon {
+  flex-shrink: 0;
+  stroke: currentColor;
+  opacity: 0.85;
+}
+
+.coffee-btn span {
+  flex: 1;
+  text-align: center;
+}
+
+.coffee-btn .chevron-icon {
+  flex-shrink: 0;
+  stroke: currentColor;
+  opacity: 0.6;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .coffee-btn:hover {
-  background: var(--card-hover);
-  border-color: rgba(255, 255, 255, 0.16);
-  transform: translateY(-1px);
+  background: #e2e8f0;
+  border-color: #94a3b8;
+  color: var(--text-color);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.09);
+}
+
+.coffee-btn:active {
+  background: #cbd5e1;
 }
 
 .coffee-btn.active {
-  background: var(--accent-color);
+  background: #0f172a;
   color: #ffffff;
-  border-color: var(--accent-color);
+  border-color: #0f172a;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.15);
+}
+
+.coffee-btn.active .chevron-icon {
+  transform: rotate(180deg);
+  opacity: 0.9;
+}
+
+.coffee-btn.active:hover {
+  background: #1e293b;
+  border-color: #1e293b;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+}
+
+/* Dark Theme Overrides for Button */
+#attendance-popup.dark-theme .coffee-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.16);
+  color: #f0f6fc;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+#attendance-popup.dark-theme .coffee-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.30);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+#attendance-popup.dark-theme .coffee-btn.active {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.40);
+  color: #ffffff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+
+#attendance-popup.dark-theme .coffee-btn.active:hover {
+  background: rgba(255, 255, 255, 0.28);
+  border-color: rgba(255, 255, 255, 0.50);
+  color: #ffffff;
 }
 
 .donation-drawer {
   background: var(--card-bg);
-  border: 1px solid var(--card-border);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
-  padding: 12px;
+  padding: 14px 12px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  max-height: 350px;
+  gap: 10px;
+  align-items: center;
+  transition: max-height 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease, padding 0.25s ease;
+  max-height: 400px;
   overflow: hidden;
   box-sizing: border-box;
 }
@@ -533,9 +600,14 @@
   padding-top: 0;
   padding-bottom: 0;
   margin: 0;
-  border: none;
+  border: 1px solid transparent;
   opacity: 0;
   pointer-events: none;
+}
+
+#attendance-popup.dark-theme .donation-drawer {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .donation-pitch {
@@ -543,72 +615,36 @@
   margin: 0;
   font-weight: 500;
   text-align: center;
-  line-height: 1.4;
+  line-height: 1.45;
   color: var(--text-muted);
 }
 
-.donation-item {
+.qr-container {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-}
-
-.donation-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.chain-title {
-  font-size: 0.78rem;
-  font-weight: 700;
-}
-
-.chain-note {
-  font-size: 0.68rem;
-  color: var(--warning-color);
-}
-
-.address-copy-container {
-  display: flex;
+  align-items: center;
   gap: 8px;
+  width: 100%;
 }
 
-.address-input {
-  flex-grow: 1;
-  background: rgba(0, 0, 0, 0.05);
-  color: var(--text-color);
-  border: 1px solid var(--card-border);
-  padding: 6px 10px;
-  border-radius: 8px;
-  font-size: 0.75rem;
-  font-family: monospace;
-  outline: none;
+.upi-qr-image {
+  width: 175px;
+  height: 175px;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  box-sizing: border-box;
+  display: block;
 }
 
-#attendance-popup.dark-theme .address-input {
-  background: rgba(0, 0, 0, 0.2);
-}
-
-.copy-btn {
-  background: var(--accent-color);
-  color: #ffffff;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 0.78rem;
+.qr-scan-hint {
+  font-size: 0.72rem;
   font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.copy-btn:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-.copy-btn.copied {
-  background: var(--success-color);
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.3;
 }
 
 /* What-If Simulation Controls */

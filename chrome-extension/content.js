@@ -174,6 +174,7 @@ function calculateOverallAttendance(data) {
 // Simulation state: maps subject name -> { attendedDelta: number, totalDelta: number }
 window.attendanceSimulations = window.attendanceSimulations || {};
 window.whatIfModeActive = window.whatIfModeActive || false;
+window.frozenSubjectOrder = window.frozenSubjectOrder || null;
 
 function displayPopup(data) {
   // Capture current scroll positions before removing existing popup
@@ -300,12 +301,33 @@ function displayPopup(data) {
       total: s.effectiveTotal
     })));
     
-    // Sort critical courses to the top so students spot them instantly
-    simulatedData.sort((a, b) => {
-      if (a.belowThreshold && !b.belowThreshold) return -1;
-      if (!a.belowThreshold && b.belowThreshold) return 1;
-      return parseFloat(a.effectivePercentage) - parseFloat(b.effectivePercentage);
-    });
+    // Freeze subject order during simulation so cards don't jump around under the user's cursor
+    if (!hasActiveSimulations && !window.whatIfModeActive) {
+      // Normal mode: sort critical courses to the top so students spot them instantly
+      simulatedData.sort((a, b) => {
+        if (a.belowThreshold && !b.belowThreshold) return -1;
+        if (!a.belowThreshold && b.belowThreshold) return 1;
+        return parseFloat(a.effectivePercentage) - parseFloat(b.effectivePercentage);
+      });
+      // Save this baseline order
+      window.frozenSubjectOrder = simulatedData.map(s => s.subject);
+    } else if (window.frozenSubjectOrder && window.frozenSubjectOrder.length > 0) {
+      // Simulation active: strictly preserve the frozen baseline order
+      simulatedData.sort((a, b) => {
+        const indexA = window.frozenSubjectOrder.indexOf(a.subject);
+        const indexB = window.frozenSubjectOrder.indexOf(b.subject);
+        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+        return 0;
+      });
+    } else {
+      // Fallback if no frozen order saved yet
+      simulatedData.sort((a, b) => {
+        if (a.belowThreshold && !b.belowThreshold) return -1;
+        if (!a.belowThreshold && b.belowThreshold) return 1;
+        return parseFloat(a.effectivePercentage) - parseFloat(b.effectivePercentage);
+      });
+      window.frozenSubjectOrder = simulatedData.map(s => s.subject);
+    }
 
     let overallRecommendations = "";
     if (overall.belowThreshold) {
@@ -383,39 +405,31 @@ function displayPopup(data) {
             "<div class='whatif-controls'>" +
               "<span class='whatif-label'>Simulate:</span>" +
               "<button class='sim-btn attend-btn' data-subject='" + encodeURIComponent(d.subject) + "' title='Simulate Attending 1 Class (+1 Attended, +1 Total)'>+ Attend</button>" +
-              "<button class='sim-btn claim-btn" + (isFullAttendance ? " disabled" : "") + "' data-subject='" + encodeURIComponent(d.subject) + "' data-is-full='" + isFullAttendance + "' title='" + (isFullAttendance ? "Attendance is already 100%. Cannot claim duty leave beyond total conducted classes." : "Simulate Claiming Duty/Medical Leave (+1 Attended, +0 Total)") + "'>+ Claim</button>" +
+              "<button class='sim-btn claim-btn" + (isFullAttendance ? " disabled" : "") + "' data-subject='" + encodeURIComponent(d.subject) + "' data-is-full='" + isFullAttendance + "' title='" + (isFullAttendance ? "Attendance is already 100%. Cannot claim medical leave beyond total conducted classes." : "Simulate Claiming Medical Leave (+1 Attended, +0 Total)") + "'>+ Claim</button>" +
               "<button class='sim-btn miss-btn' data-subject='" + encodeURIComponent(d.subject) + "' title='Simulate Missing 1 Class (+0 Attended, +1 Total)'>- Miss</button>" +
               (hasSubjectSimulation ? "<button class='sim-btn reset-subject-btn' data-subject='" + encodeURIComponent(d.subject) + "' title='Reset simulation for this subject'>🔄 Reset</button>" : "") +
             "</div>" : "") +
         "</li>";
     });
 
+    const qrUrl = (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getURL)
+      ? chrome.runtime.getURL('qr.png')
+      : (typeof browser !== 'undefined' && browser.runtime && browser.runtime.getURL)
+        ? browser.runtime.getURL('qr.png')
+        : 'qr.png';
+
     html += "</ul>" +
       "<div class='popup-footer'>" +
-        "<button id='coffee-btn' class='coffee-btn'>☕ Support the Dev</button>" +
+        "<button id='coffee-btn' class='coffee-btn' type='button'>" +
+          "<svg class='coffee-icon' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M18 8h1a4 4 0 0 1 0 8h-1'></path><path d='M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z'></path><line x1='6' y1='1' x2='6' y2='4'></line><line x1='10' y1='1' x2='10' y2='4'></line><line x1='14' y1='1' x2='14' y2='4'></line></svg>" +
+          "<span>Buy me a Cold Brew</span>" +
+          "<svg class='chevron-icon' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>" +
+        "</button>" +
         "<div id='donation-drawer' class='donation-drawer hidden'>" +
-          "<p class='donation-pitch'>If you like our work, kindly help or motivate us!</p>" +
-          
-          "<div class='donation-item'>" +
-            "<div class='donation-meta'>" +
-              "<span class='chain-title'>Solana Address (Primary)</span>" +
-              "<span class='chain-note'>⚠️ Strictly send Solana network tokens. Others will be lost.</span>" +
-            "</div>" +
-            "<div class='address-copy-container'>" +
-              "<input type='text' readonly class='address-input' value='9k2gaQoScaFBJfWGBQHX8ziqkuqJB8Un3F2RXS4D4QBY'>" +
-              "<button class='copy-btn' data-address='9k2gaQoScaFBJfWGBQHX8ziqkuqJB8Un3F2RXS4D4QBY'>Copy</button>" +
-            "</div>" +
-          "</div>" +
-
-          "<div class='donation-item'>" +
-            "<div class='donation-meta'>" +
-              "<span class='chain-title'>EVM Address (ETH/BSC/Polygon)</span>" +
-              "<span class='chain-note'>⚠️ Strictly send EVM chain tokens. Others will be lost.</span>" +
-            "</div>" +
-            "<div class='address-copy-container'>" +
-              "<input type='text' readonly class='address-input' value='0x613e296fe5c586440a01f12e7a1b94671af2987c'>" +
-              "<button class='copy-btn' data-address='0x613e296fe5c586440a01f12e7a1b94671af2987c'>Copy</button>" +
-            "</div>" +
+          "<p class='donation-pitch'>If this tool helped your attendance, buy me a cold brew to keep it running!</p>" +
+          "<div class='qr-container'>" +
+            "<img src='" + qrUrl + "' alt='UPI QR Code' class='upi-qr-image' />" +
+            "<span class='qr-scan-hint'>Scan to pay via any UPI App (GPay / PhonePe / Paytm)</span>" +
           "</div>" +
         "</div>" +
       "</div>" +
@@ -445,6 +459,7 @@ function displayPopup(data) {
   if (resetSimBtn) {
     resetSimBtn.addEventListener('click', () => {
       window.attendanceSimulations = {};
+      window.frozenSubjectOrder = null;
       displayPopup(data);
     });
   }
@@ -467,7 +482,7 @@ function displayPopup(data) {
     btn.addEventListener('click', () => {
       const isFull = btn.getAttribute('data-is-full') === 'true';
       if (isFull) {
-        showToast("⚠️ Attendance is already 100%! You cannot claim duty/medical leave beyond conducted classes.");
+        showToast("⚠️ Attendance is already 100%! You cannot claim medical leave beyond conducted classes.");
         return;
       }
       const subject = decodeURIComponent(btn.getAttribute('data-subject'));

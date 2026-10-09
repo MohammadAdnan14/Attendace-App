@@ -291,12 +291,18 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 10px;
-  border-radius: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
   text-align: center;
-  font-size: 0.8em;
-  font-weight: 500;
   box-sizing: border-box;
+  cursor: help;
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.15s ease, filter 0.15s ease;
+  user-select: none;
+}
+
+.rec-badge:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
 }
 
 .rec-badge.attend {
@@ -312,15 +318,16 @@
 }
 
 .badge-label {
-  font-size: 0.75em;
-  opacity: 0.85;
-  margin-bottom: 3px;
+  font-size: 0.84rem;
+  opacity: 0.95;
+  margin-bottom: 4px;
   font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .badge-val {
   font-weight: 700;
-  font-size: 1.05em;
+  font-size: 0.84rem;
 }
 
 .overall-message {
@@ -444,6 +451,14 @@
   border-radius: 6px;
   font-size: 0.75rem;
   font-weight: 600;
+  cursor: help;
+  transition: filter 0.15s ease, box-shadow 0.15s ease;
+  user-select: none;
+}
+
+.rec-badge-mini:hover {
+  filter: brightness(1.12);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
 }
 
 .rec-badge-mini.attend {

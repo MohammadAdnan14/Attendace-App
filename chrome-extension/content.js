@@ -331,13 +331,15 @@ function displayPopup(data) {
 
     let overallRecommendations = "";
     if (overall.belowThreshold) {
+      const attendTitle = "Attend " + overall.requiredClasses + " classes to reach 75%+ attendance";
+      const leaveTitle = "Claim " + overall.directAttendance + " leaves to reach 75%+ attendance";
       overallRecommendations = 
         "<div class='overall-recommendations'>" +
-          "<div class='rec-badge attend'>" +
+          "<div class='rec-badge attend' title='" + attendTitle + "'>" +
             "<span class='badge-label'>Attend:</span>" +
             "<span class='badge-val'>+" + overall.requiredClasses + " classes</span>" +
           "</div>" +
-          "<div class='rec-badge direct'>" +
+          "<div class='rec-badge direct' title='" + leaveTitle + "'>" +
             "<span class='badge-label'>Claim Leave:</span>" +
             "<span class='badge-val'>+" + overall.directAttendance + " present</span>" +
           "</div>" +
@@ -375,10 +377,12 @@ function displayPopup(data) {
     simulatedData.forEach(d => {
       let recHtml = "";
       if (d.belowThreshold) {
+        const subAttendTitle = "Attend " + d.extraClasses + " classes to reach 60%+ attendance";
+        const subLeaveTitle = "Claim " + d.directAttendance + " leaves to reach 60%+ attendance";
         recHtml = 
           "<div class='recommendation-badges'>" +
-            "<span class='rec-badge-mini attend'>Attend: +" + d.extraClasses + "</span>" +
-            "<span class='rec-badge-mini direct'>Leave: +" + d.directAttendance + "</span>" +
+            "<span class='rec-badge-mini attend' title='" + subAttendTitle + "'>Attend: +" + d.extraClasses + "</span>" +
+            "<span class='rec-badge-mini direct' title='" + subLeaveTitle + "'>Leave: +" + d.directAttendance + "</span>" +
           "</div>";
       } else {
         recHtml = "<span class='safe-message'>" + d.message + "</span>";

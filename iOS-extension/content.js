@@ -1,8 +1,3 @@
-// iOS-specific initialization
-if (typeof browser === 'undefined') {
-  window.browser = chrome;
-}
-
 function calculateInsights() {
   console.log('Starting attendance calculation...');
   
@@ -336,13 +331,15 @@ function displayPopup(data) {
 
     let overallRecommendations = "";
     if (overall.belowThreshold) {
+      const attendTitle = "Attend " + overall.requiredClasses + " classes to reach 75%+ attendance";
+      const leaveTitle = "Claim " + overall.directAttendance + " leaves to reach 75%+ attendance";
       overallRecommendations = 
         "<div class='overall-recommendations'>" +
-          "<div class='rec-badge attend'>" +
+          "<div class='rec-badge attend' title='" + attendTitle + "'>" +
             "<span class='badge-label'>Attend:</span>" +
             "<span class='badge-val'>+" + overall.requiredClasses + " classes</span>" +
           "</div>" +
-          "<div class='rec-badge direct'>" +
+          "<div class='rec-badge direct' title='" + leaveTitle + "'>" +
             "<span class='badge-label'>Claim Leave:</span>" +
             "<span class='badge-val'>+" + overall.directAttendance + " present</span>" +
           "</div>" +
@@ -380,10 +377,12 @@ function displayPopup(data) {
     simulatedData.forEach(d => {
       let recHtml = "";
       if (d.belowThreshold) {
+        const subAttendTitle = "Attend " + d.extraClasses + " classes to reach 60%+ attendance";
+        const subLeaveTitle = "Claim " + d.directAttendance + " leaves to reach 60%+ attendance";
         recHtml = 
           "<div class='recommendation-badges'>" +
-            "<span class='rec-badge-mini attend'>Attend: +" + d.extraClasses + "</span>" +
-            "<span class='rec-badge-mini direct'>Leave: +" + d.directAttendance + "</span>" +
+            "<span class='rec-badge-mini attend' title='" + subAttendTitle + "'>Attend: +" + d.extraClasses + "</span>" +
+            "<span class='rec-badge-mini direct' title='" + subLeaveTitle + "'>Leave: +" + d.directAttendance + "</span>" +
           "</div>";
       } else {
         recHtml = "<span class='safe-message'>" + d.message + "</span>";
@@ -393,7 +392,7 @@ function displayPopup(data) {
         ? `<span class='delta-tag'>(${d.attendedDelta >= 0 ? '+' + d.attendedDelta : d.attendedDelta}/${d.totalDelta >= 0 ? '+' + d.totalDelta : d.totalDelta})</span>`
         : "";
 
-      const hasSubjectDelta = (d.attendedDelta !== 0 || d.totalDelta !== 0);
+      const hasSubjectSimulation = (d.attendedDelta !== 0 || d.totalDelta !== 0);
       const isFullAttendance = (d.effectiveAttended >= d.effectiveTotal);
 
       html += 
@@ -412,7 +411,7 @@ function displayPopup(data) {
               "<button class='sim-btn attend-btn' data-subject='" + encodeURIComponent(d.subject) + "' title='Simulate Attending 1 Class (+1 Attended, +1 Total)'>+ Attend</button>" +
               "<button class='sim-btn claim-btn" + (isFullAttendance ? " disabled" : "") + "' data-subject='" + encodeURIComponent(d.subject) + "' data-is-full='" + isFullAttendance + "' title='" + (isFullAttendance ? "Attendance is already 100%. Cannot claim medical leave beyond total conducted classes." : "Simulate Claiming Medical Leave (+1 Attended, +0 Total)") + "'>+ Claim</button>" +
               "<button class='sim-btn miss-btn' data-subject='" + encodeURIComponent(d.subject) + "' title='Simulate Missing 1 Class (+0 Attended, +1 Total)'>- Miss</button>" +
-              (hasSubjectDelta ? "<button class='sim-btn reset-subject-btn' data-subject='" + encodeURIComponent(d.subject) + "' title='Reset Simulation for this Subject'>🔄 Reset</button>" : "") +
+              (hasSubjectSimulation ? "<button class='sim-btn reset-subject-btn' data-subject='" + encodeURIComponent(d.subject) + "' title='Reset simulation for this subject'>🔄 Reset</button>" : "") +
             "</div>" : "") +
         "</li>";
     });
@@ -575,10 +574,6 @@ const Storage = {
       chrome.storage.local.get([key], function(result) {
         callback(result[key] !== undefined ? result[key] : defaultValue);
       });
-    } else if (typeof browser !== 'undefined' && browser.storage && browser.storage.local) {
-      browser.storage.local.get([key]).then(function(result) {
-        callback(result[key] !== undefined ? result[key] : defaultValue);
-      });
     } else {
       const val = localStorage.getItem(key);
       callback(val !== null ? val : defaultValue);
@@ -589,10 +584,6 @@ const Storage = {
       const obj = {};
       obj[key] = value;
       chrome.storage.local.set(obj);
-    } else if (typeof browser !== 'undefined' && browser.storage && browser.storage.local) {
-      const obj = {};
-      obj[key] = value;
-      browser.storage.local.set(obj);
     } else {
       localStorage.setItem(key, value);
     }

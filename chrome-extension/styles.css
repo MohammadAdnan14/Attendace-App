@@ -42,10 +42,20 @@
   max-height: 88vh;
   overflow: hidden;
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   border: 1px solid var(--border-color);
   transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1), width 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
   display: flex;
   flex-direction: column;
+}
+
+#attendance-popup button {
+  font-family: inherit;
+  text-shadow: none !important;
+  text-decoration: none !important;
+  letter-spacing: normal;
+  outline: none;
 }
 
 #attendance-popup.dark-theme {
@@ -110,6 +120,18 @@
   height: 54px;
   box-sizing: border-box;
   backdrop-filter: blur(10px);
+  cursor: grab;
+}
+
+.popup-header:active,
+#attendance-popup.is-dragging .popup-header {
+  cursor: grabbing;
+}
+
+#attendance-popup.is-dragging {
+  transition: none !important;
+  user-select: none;
+  box-shadow: 0 32px 64px -12px rgba(15, 23, 42, 0.4), 0 0 0 1px rgba(99, 102, 241, 0.35);
 }
 
 .header-left {
@@ -122,9 +144,16 @@
 }
 
 .header-icon {
-  font-size: 1.2em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
   line-height: 1;
+}
+
+.header-svg {
+  stroke: var(--accent-color);
+  display: block;
 }
 
 .popup-header h3 {
@@ -162,6 +191,16 @@
   box-sizing: border-box;
 }
 
+.control-btn .control-svg {
+  stroke: currentColor;
+  display: block;
+  transition: transform 0.2s ease;
+}
+
+.control-btn:hover .control-svg {
+  transform: scale(1.12);
+}
+
 .control-btn:hover {
   background: var(--btn-hover);
   transform: translateY(-1px);
@@ -174,7 +213,7 @@
 .control-btn.active {
   background: var(--accent-color);
   color: #ffffff;
-  box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
 }
 
 .popup-body-wrapper {
@@ -216,7 +255,7 @@
 
 .attendance-summary.sim-highlight {
   border-color: var(--accent-color);
-  box-shadow: 0 0 16px rgba(99, 102, 241, 0.2);
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.25);
 }
 
 .summary-top {
@@ -339,6 +378,13 @@
 
 .overall-message.safe {
   color: var(--success-color);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.overall-message.safe.edge {
+  color: var(--warning-color);
 }
 
 .reset-sim-wrapper {
@@ -348,21 +394,37 @@
 }
 
 .reset-sim-btn {
-  background: rgba(244, 63, 94, 0.15);
-  color: var(--danger-color);
-  border: 1px solid var(--danger-color);
+  background: rgba(244, 63, 94, 0.10);
+  color: #be123c;
+  border: 1px solid rgba(244, 63, 94, 0.35);
   padding: 6px 12px;
   border-radius: 8px;
   font-size: 0.78rem;
   font-weight: 600;
+  letter-spacing: 0.01em;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .reset-sim-btn:hover {
-  background: var(--danger-color);
-  color: #ffffff;
-  transform: translateY(-1px);
+  background: rgba(244, 63, 94, 0.20);
+  color: #9f1239;
+  border-color: rgba(244, 63, 94, 0.60);
+  box-shadow: 0 2px 6px rgba(244, 63, 94, 0.15);
+}
+
+.reset-svg {
+  stroke: currentColor;
+  flex-shrink: 0;
+  transition: transform 0.3s ease;
+}
+
+.reset-sim-btn:hover .reset-svg,
+.sim-btn.reset-subject-btn:hover .reset-svg {
+  transform: rotate(-180deg);
 }
 
 /* Subject List Cards */
@@ -477,6 +539,18 @@
   font-size: 0.78rem;
   color: var(--success-color);
   font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.safe-message.edge {
+  color: var(--warning-color);
+}
+
+.status-svg {
+  stroke: currentColor;
+  flex-shrink: 0;
 }
 
 .error-view {
@@ -686,6 +760,7 @@
   border-radius: 8px;
   font-size: 0.75rem;
   font-weight: 600;
+  letter-spacing: 0.01em;
   cursor: pointer;
   white-space: nowrap;
   display: inline-flex;
@@ -696,23 +771,37 @@
   height: auto;
   box-sizing: border-box;
   flex-shrink: 0;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .sim-btn:active {
-  transform: scale(0.94);
+  transform: scale(0.96);
 }
 
 .sim-btn.attend-btn {
-  background: var(--success-bg);
-  color: var(--success-color);
-  border: 1px solid var(--success-color);
+  background: rgba(16, 185, 129, 0.10);
+  color: #047857;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.sim-btn.attend-btn:hover {
+  background: rgba(16, 185, 129, 0.22);
+  color: #065f46;
+  border-color: rgba(16, 185, 129, 0.60);
+  box-shadow: 0 1px 4px rgba(16, 185, 129, 0.15);
 }
 
 .sim-btn.claim-btn {
-  background: var(--warning-bg);
-  color: var(--warning-color);
-  border: 1px solid var(--warning-color);
+  background: rgba(245, 158, 11, 0.10);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.sim-btn.claim-btn:hover:not(.disabled) {
+  background: rgba(245, 158, 11, 0.22);
+  color: #92400e;
+  border-color: rgba(245, 158, 11, 0.60);
+  box-shadow: 0 1px 4px rgba(245, 158, 11, 0.15);
 }
 
 .sim-btn.claim-btn.disabled {
@@ -722,27 +811,101 @@
 }
 
 .sim-btn.miss-btn {
-  background: var(--danger-bg);
-  color: var(--danger-color);
-  border: 1px solid var(--danger-color);
+  background: rgba(244, 63, 94, 0.10);
+  color: #be123c;
+  border: 1px solid rgba(244, 63, 94, 0.35);
+}
+
+.sim-btn.miss-btn:hover {
+  background: rgba(244, 63, 94, 0.22);
+  color: #9f1239;
+  border-color: rgba(244, 63, 94, 0.60);
+  box-shadow: 0 1px 4px rgba(244, 63, 94, 0.15);
 }
 
 .sim-btn.reset-subject-btn {
   background: transparent;
-  color: var(--text-color);
+  color: var(--text-muted);
   border: 1px dashed var(--border-color);
-  opacity: 0.8;
+  opacity: 0.85;
   margin-left: auto;
 }
 
 .sim-btn.reset-subject-btn:hover {
   opacity: 1;
+  background: rgba(15, 23, 42, 0.06);
+  color: var(--text-color);
   border-style: solid;
+  border-color: rgba(15, 23, 42, 0.22);
 }
 
-.sim-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+/* Dark Mode Simulation Controls - Crisp, bleed-free colors */
+#attendance-popup.dark-theme .sim-btn.attend-btn {
+  background: rgba(16, 185, 129, 0.14);
+  color: #6ee7b7;
+  border: 1px solid rgba(110, 231, 183, 0.30);
+}
+
+#attendance-popup.dark-theme .sim-btn.attend-btn:hover {
+  background: rgba(16, 185, 129, 0.26);
+  color: #a7f3d0;
+  border-color: rgba(110, 231, 183, 0.55);
+  box-shadow: 0 1px 6px rgba(16, 185, 129, 0.20);
+}
+
+#attendance-popup.dark-theme .sim-btn.claim-btn {
+  background: rgba(245, 158, 11, 0.14);
+  color: #fcd34d;
+  border: 1px solid rgba(252, 211, 77, 0.30);
+}
+
+#attendance-popup.dark-theme .sim-btn.claim-btn:hover:not(.disabled) {
+  background: rgba(245, 158, 11, 0.26);
+  color: #fde68a;
+  border-color: rgba(252, 211, 77, 0.55);
+  box-shadow: 0 1px 6px rgba(245, 158, 11, 0.20);
+}
+
+#attendance-popup.dark-theme .sim-btn.miss-btn {
+  background: rgba(244, 63, 94, 0.14);
+  color: #fda4af;
+  border: 1px solid rgba(253, 164, 175, 0.30);
+}
+
+#attendance-popup.dark-theme .sim-btn.miss-btn:hover {
+  background: rgba(244, 63, 94, 0.26);
+  color: #fecdd3;
+  border-color: rgba(253, 164, 175, 0.55);
+  box-shadow: 0 1px 6px rgba(244, 63, 94, 0.20);
+}
+
+#attendance-popup.dark-theme .sim-btn.reset-subject-btn {
+  background: rgba(255, 255, 255, 0.05);
+  color: #cbd5e1;
+  border: 1px dashed rgba(255, 255, 255, 0.20);
+}
+
+#attendance-popup.dark-theme .sim-btn.reset-subject-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #f1f5f9;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+#attendance-popup.dark-theme .reset-sim-btn {
+  background: rgba(244, 63, 94, 0.14);
+  color: #fda4af;
+  border: 1px solid rgba(253, 164, 175, 0.30);
+}
+
+#attendance-popup.dark-theme .reset-sim-btn:hover {
+  background: rgba(244, 63, 94, 0.26);
+  color: #fecdd3;
+  border-color: rgba(253, 164, 175, 0.55);
+  box-shadow: 0 2px 8px rgba(244, 63, 94, 0.25);
+}
+
+#attendance-popup.dark-theme .delta-tag {
+  color: #a5b4fc;
 }
 
 /* Toast Notification Styling */
@@ -771,4 +934,14 @@
 #attendance-toast.show {
   opacity: 1;
   transform: translateY(0) scale(1);
+}
+
+.toast-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toast-svg {
+  flex-shrink: 0;
 }

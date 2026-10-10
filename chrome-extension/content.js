@@ -1,3 +1,11 @@
+// Custom vector SVG assets for UI controls, status indicators, and badges
+const ICONS = {
+  reset: '<svg class="reset-svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>',
+  warning: '<svg class="toast-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>',
+  check: '<svg class="status-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>',
+  info: '<svg class="status-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>'
+};
+
 function calculateInsights() {
   console.log('Starting attendance calculation...');
   
@@ -103,11 +111,9 @@ function calculateInsights() {
         bunkable += 1;
       }
       bunkable -= 1; // The last increment takes it below threshold
-      message = percentage === 100
-        ? "😎 You can skip " + bunkable + " classes"
-        : bunkable === 0 
-          ? "😅 You're right on edge"
-          : "✅ You can skip " + bunkable + " classes";
+      message = bunkable === 0 
+        ? "Right on edge"
+        : "You can skip " + bunkable + " classes";
     }
 
     results.push({ 
@@ -152,11 +158,9 @@ function calculateOverallAttendance(data) {
     directAttendance = Math.ceil((overallThreshold / 100) * total) - attended;
   } else {
     skippableClasses = Math.floor((attended / 0.75) - total);
-    message = percentage === 100
-      ? "😎 You can skip " + skippableClasses + " classes"
-      : skippableClasses === 0
-        ? "😅 You're right on edge"
-        : "✅ You can skip " + skippableClasses + " classes";
+    message = skippableClasses === 0
+      ? "Right on edge"
+      : "You can skip " + skippableClasses + " classes";
   }
   
   return {
@@ -175,9 +179,10 @@ function calculateOverallAttendance(data) {
 window.attendanceSimulations = window.attendanceSimulations || {};
 window.whatIfModeActive = window.whatIfModeActive || false;
 window.frozenSubjectOrder = window.frozenSubjectOrder || null;
+window.attendancePopupPosition = window.attendancePopupPosition || null;
 
 function displayPopup(data) {
-  // Capture current scroll positions before removing existing popup
+  // Capture current scroll positions and position before removing existing popup
   let bodyWrapperScroll = 0;
   let subjectListScroll = 0;
   const existingPopup = document.getElementById('attendance-popup');
@@ -186,11 +191,40 @@ function displayPopup(data) {
     if (existingWrapper) bodyWrapperScroll = existingWrapper.scrollTop;
     const existingList = existingPopup.querySelector('.subject-list');
     if (existingList) subjectListScroll = existingList.scrollTop;
+    if (existingPopup.style.left && existingPopup.style.top) {
+      window.attendancePopupPosition = {
+        left: existingPopup.style.left,
+        top: existingPopup.style.top
+      };
+    }
     existingPopup.remove();
   }
 
   const popup = document.createElement("div");
   popup.id = "attendance-popup";
+
+  // Restore position (memory or persistent Storage)
+  if (window.attendancePopupPosition) {
+    popup.style.left = window.attendancePopupPosition.left;
+    popup.style.top = window.attendancePopupPosition.top;
+    popup.style.right = 'auto';
+    popup.style.bottom = 'auto';
+  } else {
+    Storage.get('attendance-popup-pos', null, function(savedPos) {
+      if (savedPos) {
+        try {
+          const parsed = typeof savedPos === 'string' ? JSON.parse(savedPos) : savedPos;
+          if (parsed && parsed.left && parsed.top) {
+            window.attendancePopupPosition = parsed;
+            popup.style.left = parsed.left;
+            popup.style.top = parsed.top;
+            popup.style.right = 'auto';
+            popup.style.bottom = 'auto';
+          }
+        } catch (e) {}
+      }
+    });
+  }
 
   // Restore states using Storage helper (or initial state)
   Storage.get('attendance-theme', 'light', function(savedTheme) {
@@ -206,6 +240,7 @@ function displayPopup(data) {
     const collapseBtn = popup.querySelector('#collapse-toggle');
     if (collapseBtn) {
       collapseBtn.textContent = popup.classList.contains('collapsed') ? "➕" : "➖";
+      collapseBtn.title = popup.classList.contains('collapsed') ? "Expand" : "Minimize";
     }
   });
 
@@ -273,11 +308,9 @@ function displayPopup(data) {
           bunkable += 1;
         }
         bunkable -= 1;
-        message = effectivePercentage === 100
-          ? "😎 You can skip " + bunkable + " classes"
-          : bunkable === 0 
-            ? "😅 You're right on edge"
-            : "✅ You can skip " + bunkable + " classes";
+        message = bunkable === 0 
+          ? "Right on edge"
+          : "You can skip " + bunkable + " classes";
       }
 
       return {
@@ -345,7 +378,8 @@ function displayPopup(data) {
           "</div>" +
         "</div>";
     } else {
-      overallRecommendations = "<p class='overall-message safe'>" + overall.message + " to stay above 75%</p>";
+      const isEdge = overall.skippableClasses === 0;
+      overallRecommendations = "<p class='overall-message safe" + (isEdge ? " edge" : "") + "'>" + (isEdge ? ICONS.info : ICONS.check) + "<span>" + overall.message + " to stay above 75%</span></p>";
     }
 
     let html = 
@@ -357,7 +391,7 @@ function displayPopup(data) {
         "<div class='header-controls'>" +
           "<button id='whatif-toggle' class='control-btn" + (window.whatIfModeActive ? " active" : "") + "' title='Toggle What-If Simulation'>🔮</button>" +
           "<button id='theme-toggle' class='control-btn' title='Toggle Theme'>🌓</button>" +
-          "<button id='collapse-toggle' class='control-btn' title='Minimize'></button>" +
+          "<button id='collapse-toggle' class='control-btn' title='Minimize'>➖</button>" +
         "</div>" +
       "</div>" +
       "<div class='popup-body-wrapper'>" +
@@ -370,7 +404,7 @@ function displayPopup(data) {
             "<div class='progress-bar-fill' style='width: " + Math.min(100, Math.max(0, overall.percentage)) + "%'></div>" +
           "</div>" +
           overallRecommendations +
-          (hasActiveSimulations ? "<div class='reset-sim-wrapper'><button id='reset-sim-btn' class='reset-sim-btn'>🔄 Reset Simulation</button></div>" : "") +
+          (hasActiveSimulations ? "<div class='reset-sim-wrapper'><button id='reset-sim-btn' class='reset-sim-btn'>" + ICONS.reset + "<span>Reset Simulation</span></button></div>" : "") +
         "</div>" +
         "<ul class='subject-list'>";
     
@@ -385,7 +419,8 @@ function displayPopup(data) {
             "<span class='rec-badge-mini direct' title='" + subLeaveTitle + "'>Leave: +" + d.directAttendance + "</span>" +
           "</div>";
       } else {
-        recHtml = "<span class='safe-message'>" + d.message + "</span>";
+        const isEdge = d.bunkable === 0;
+        recHtml = "<span class='safe-message" + (isEdge ? " edge" : "") + "'>" + (isEdge ? ICONS.info : ICONS.check) + "<span>" + d.message + "</span></span>";
       }
 
       const deltaText = d.totalDelta > 0 
@@ -411,7 +446,7 @@ function displayPopup(data) {
               "<button class='sim-btn attend-btn' data-subject='" + encodeURIComponent(d.subject) + "' title='Simulate Attending 1 Class (+1 Attended, +1 Total)'>+ Attend</button>" +
               "<button class='sim-btn claim-btn" + (isFullAttendance ? " disabled" : "") + "' data-subject='" + encodeURIComponent(d.subject) + "' data-is-full='" + isFullAttendance + "' title='" + (isFullAttendance ? "Attendance is already 100%. Cannot claim medical leave beyond total conducted classes." : "Simulate Claiming Medical Leave (+1 Attended, +0 Total)") + "'>+ Claim</button>" +
               "<button class='sim-btn miss-btn' data-subject='" + encodeURIComponent(d.subject) + "' title='Simulate Missing 1 Class (+0 Attended, +1 Total)'>- Miss</button>" +
-              (hasSubjectSimulation ? "<button class='sim-btn reset-subject-btn' data-subject='" + encodeURIComponent(d.subject) + "' title='Reset simulation for this subject'>🔄 Reset</button>" : "") +
+              (hasSubjectSimulation ? "<button class='sim-btn reset-subject-btn' data-subject='" + encodeURIComponent(d.subject) + "' title='Reset simulation for this subject'>" + ICONS.reset + "<span>Reset</span></button>" : "") +
             "</div>" : "") +
         "</li>";
     });
@@ -486,7 +521,7 @@ function displayPopup(data) {
     btn.addEventListener('click', () => {
       const isFull = btn.getAttribute('data-is-full') === 'true';
       if (isFull) {
-        showToast("⚠️ Attendance is already 100%! You cannot claim medical leave beyond conducted classes.");
+        showToast("Attendance is already 100%! You cannot claim medical leave beyond conducted classes.");
         return;
       }
       const subject = decodeURIComponent(btn.getAttribute('data-subject'));
@@ -531,11 +566,13 @@ function displayPopup(data) {
   const collapseToggle = document.getElementById('collapse-toggle');
   if (collapseToggle) {
     collapseToggle.textContent = popup.classList.contains('collapsed') ? "➕" : "➖";
+    collapseToggle.title = popup.classList.contains('collapsed') ? "Expand" : "Minimize";
     collapseToggle.addEventListener('click', () => {
       popup.classList.toggle('collapsed');
       const isCollapsed = popup.classList.contains('collapsed');
       Storage.set('attendance-collapsed', isCollapsed ? 'true' : 'false');
       collapseToggle.textContent = isCollapsed ? "➕" : "➖";
+      collapseToggle.title = isCollapsed ? "Expand" : "Minimize";
     });
   }
 
@@ -565,7 +602,119 @@ function displayPopup(data) {
       });
     });
   });
+
+  // Draggable window implementation
+  const header = popup.querySelector('.popup-header');
+  if (header) {
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+    let initialLeft = 0;
+    let initialTop = 0;
+
+    const startDrag = (clientX, clientY) => {
+      isDragging = true;
+      startX = clientX;
+      startY = clientY;
+      const rect = popup.getBoundingClientRect();
+      initialLeft = rect.left;
+      initialTop = rect.top;
+      popup.style.right = 'auto';
+      popup.style.bottom = 'auto';
+      popup.style.left = initialLeft + 'px';
+      popup.style.top = initialTop + 'px';
+      popup.classList.add('is-dragging');
+    };
+
+    const moveDrag = (clientX, clientY) => {
+      if (!isDragging) return;
+      const dx = clientX - startX;
+      const dy = clientY - startY;
+      const pad = 10;
+      const maxLeft = Math.max(pad, window.innerWidth - popup.offsetWidth - pad);
+      const maxTop = Math.max(pad, window.innerHeight - 50);
+
+      const newLeft = Math.min(Math.max(pad, initialLeft + dx), maxLeft);
+      const newTop = Math.min(Math.max(pad, initialTop + dy), maxTop);
+
+      popup.style.left = newLeft + 'px';
+      popup.style.top = newTop + 'px';
+    };
+
+    const stopDrag = () => {
+      if (!isDragging) return;
+      isDragging = false;
+      popup.classList.remove('is-dragging');
+      window.attendancePopupPosition = {
+        left: popup.style.left,
+        top: popup.style.top
+      };
+      Storage.set('attendance-popup-pos', JSON.stringify(window.attendancePopupPosition));
+    };
+
+    // Mouse drag handlers
+    header.addEventListener('mousedown', (e) => {
+      if (e.target.closest('.header-controls') || e.target.closest('button')) return;
+      if (e.button !== 0) return;
+      e.preventDefault();
+      startDrag(e.clientX, e.clientY);
+
+      const onMouseMove = (ev) => {
+        ev.preventDefault();
+        moveDrag(ev.clientX, ev.clientY);
+      };
+
+      const onMouseUp = () => {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        stopDrag();
+      };
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    });
+
+    // Touch drag handlers (for touch screens/tablets)
+    header.addEventListener('touchstart', (e) => {
+      if (e.target.closest('.header-controls') || e.target.closest('button')) return;
+      if (e.touches.length !== 1) return;
+      const touch = e.touches[0];
+      startDrag(touch.clientX, touch.clientY);
+
+      const onTouchMove = (ev) => {
+        if (ev.touches.length !== 1) return;
+        ev.preventDefault();
+        moveDrag(ev.touches[0].clientX, ev.touches[0].clientY);
+      };
+
+      const onTouchEnd = () => {
+        document.removeEventListener('touchmove', onTouchMove);
+        document.removeEventListener('touchend', onTouchEnd);
+        stopDrag();
+      };
+
+      document.addEventListener('touchmove', onTouchMove, { passive: false });
+      document.addEventListener('touchend', onTouchEnd);
+    }, { passive: true });
+  }
 }
+
+// Clamp popup position on window resize to keep it on-screen
+window.addEventListener('resize', () => {
+  const p = document.getElementById('attendance-popup');
+  if (p && p.style.left) {
+    const rect = p.getBoundingClientRect();
+    const pad = 10;
+    if (rect.right > window.innerWidth) {
+      p.style.left = Math.max(pad, window.innerWidth - p.offsetWidth - pad) + 'px';
+      if (window.attendancePopupPosition) window.attendancePopupPosition.left = p.style.left;
+    }
+    if (rect.bottom > window.innerHeight) {
+      p.style.top = Math.max(pad, window.innerHeight - p.offsetHeight - pad) + 'px';
+      if (window.attendancePopupPosition) window.attendancePopupPosition.top = p.style.top;
+    }
+  }
+});
 
 // Cross-browser storage helper with fallback to localStorage
 const Storage = {
@@ -597,7 +746,7 @@ function showToast(message) {
     toast.id = 'attendance-toast';
     document.body.appendChild(toast);
   }
-  toast.textContent = message;
+  toast.innerHTML = `<span class="toast-content">${ICONS.warning}<span>${message}</span></span>`;
   toast.classList.add('show');
   if (window.toastTimeout) clearTimeout(window.toastTimeout);
   window.toastTimeout = setTimeout(() => {

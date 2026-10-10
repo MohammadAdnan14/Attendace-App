@@ -50,7 +50,7 @@ While college ERP portals display static attendance numbers, **RBU Attendance Pl
 | :--- | :--- | :--- | :--- |
 | **Google Chrome** | Chromium / Blink | Manifest V3 | `chrome-extension/` |
 | **Mozilla Firefox** | Gecko | Manifest V2/V3 | `firefox-extension/` |
-| **Apple Safari (iOS / macOS)** | WebKit | Safari Web Extension | `iOS-extension/` |
+| **Apple Safari (iOS / macOS)** | WebKit | Safari Web Extension | `safari-extension/` |
 
 ---
 
@@ -74,7 +74,7 @@ While college ERP portals display static attendance numbers, **RBU Attendance Pl
 ### Apple Safari (iOS / iPadOS / macOS)
 1. Open the project in Xcode using the Safari Web Extension converter:
    ```bash
-   xcrun safari-web-extension-converter iOS-extension/
+   xcrun safari-web-extension-converter safari-extension/
    ```
 2. Build and run on your target iOS device or simulator.
 

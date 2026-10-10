@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "RBU Attendance Planner",
   "version": "1.0",
-  "description": "Smart attendance calculator & What-If simulator for RBU students. Calculate bunkable classes, simulate upcoming sessions, plan medical leaves, and track goals in sleek Dark & Light themes.",
+  "description": "Smart attendance calculator & What-If simulator for RBU students. Plan safe bunks, medical leaves, and hit 75% target.",
   "license" : "MIT",
   "icons": {
     "16": "icon16.png",

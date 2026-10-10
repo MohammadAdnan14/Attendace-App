@@ -6,6 +6,16 @@ const ICONS = {
   info: '<svg class="status-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>'
 };
 
+function escapeHtml(str) {
+  if (typeof str !== 'string') return str;
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 function calculateInsights() {
   console.log('Starting attendance calculation...');
   
@@ -433,7 +443,7 @@ function displayPopup(data) {
       html += 
         "<li class='subject-card " + (d.belowThreshold ? 'warning-card' : '') + "'>" +
           "<div class='subject-header'>" +
-            "<strong class='subject-title'>" + d.subject + "</strong>" +
+            "<strong class='subject-title'>" + escapeHtml(d.subject) + "</strong>" +
             "<span class='subject-percentage " + (d.belowThreshold ? "low-attendance" : "") + "'>" + d.effectivePercentage + "%</span>" +
           "</div>" +
           "<div class='subject-body'>" +

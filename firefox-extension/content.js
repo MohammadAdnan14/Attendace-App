@@ -16,6 +16,14 @@ function escapeHtml(str) {
     .replace(/'/g, '&#039;');
 }
 
+function setSafeHTML(element, htmlString) {
+  element.replaceChildren();
+  const parsed = new DOMParser().parseFromString(htmlString, 'text/html');
+  while (parsed.body.firstChild) {
+    element.appendChild(parsed.body.firstChild);
+  }
+}
+
 function calculateInsights() {
   console.log('Starting attendance calculation...');
   
@@ -259,7 +267,7 @@ function displayPopup(data) {
   }
 
   if (data.length === 0) {
-    popup.innerHTML = 
+    setSafeHTML(popup, 
       "<div class='popup-header'>" +
         "<div class='header-left'>" +
           "<span class='header-icon'>📊</span>" +
@@ -280,7 +288,8 @@ function displayPopup(data) {
             "<li>You're logged in to the portal</li>" +
           "</ul>" +
         "</div>" +
-      "</div>";
+      "</div>"
+    );
   } else {
     // Apply simulation deltas to data
     let hasActiveSimulations = false;
@@ -484,7 +493,7 @@ function displayPopup(data) {
       "</div>" +
     "</div>";
 
-    popup.innerHTML = html;
+    setSafeHTML(popup, html);
   }
 
   document.body.appendChild(popup);
@@ -756,7 +765,17 @@ function showToast(message) {
     toast.id = 'attendance-toast';
     document.body.appendChild(toast);
   }
-  toast.innerHTML = `<span class="toast-content">${ICONS.warning}<span>${message}</span></span>`;
+  toast.replaceChildren();
+  const contentSpan = document.createElement('span');
+  contentSpan.className = 'toast-content';
+  const iconDoc = new DOMParser().parseFromString(ICONS.warning, 'text/html');
+  if (iconDoc.body.firstChild) {
+    contentSpan.appendChild(iconDoc.body.firstChild);
+  }
+  const msgSpan = document.createElement('span');
+  msgSpan.textContent = message;
+  contentSpan.appendChild(msgSpan);
+  toast.appendChild(contentSpan);
   toast.classList.add('show');
   if (window.toastTimeout) clearTimeout(window.toastTimeout);
   window.toastTimeout = setTimeout(() => {

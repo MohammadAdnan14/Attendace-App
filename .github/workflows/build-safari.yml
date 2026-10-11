@@ -3,23 +3,36 @@ name: Build Safari Extension (.app)
 on:
   push:
     branches: [ "**" ]
+    paths-ignore:
+      - "safari-extension/RBU-Attendance-Planner-macOS.zip"
   pull_request:
     branches: [ "**" ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-macos:
-    name: Compile macOS Safari Extension (.app)
+    name: Compile & Sign macOS Safari Extension (.app)
     runs-on: macos-latest
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare clean WebExtension source (exclude nested .zip archives)
+        run: |
+          rm -rf safari-src
+          cp -R safari-extension safari-src
+          rm -f safari-src/*.zip
 
       - name: Convert Web Extension to Xcode Project
         run: |
           mkdir -p SafariApp
-          yes | xcrun safari-web-extension-converter safari-extension \
+          yes | xcrun safari-web-extension-converter safari-src \
             --app-name "RBUAttendancePlanner" \
             --bundle-identifier "com.rbu.RBUAttendancePlanner" \
             --swift \
@@ -43,18 +56,50 @@ jobs:
             -derivedDataPath derived_data \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_IDENTITY="" \
             build
 
-      - name: Package macOS .app into Zip
+      - name: Clean, Ad-Hoc Sign (_CodeSignature), and Package macOS .app
         run: |
           APP_PATH=$(find derived_data/Build/Products/Release -name "*.app" -maxdepth 2 | head -n 1)
           echo "Found app at: $APP_PATH"
-          APP_DIR=$(dirname "$APP_PATH")
-          APP_NAME=$(basename "$APP_PATH")
-          cd "$APP_DIR"
-          zip -r "RBU-Attendance-Planner-macOS.zip" "$APP_NAME"
-          mv "RBU-Attendance-Planner-macOS.zip" "$GITHUB_WORKSPACE/"
+
+          # 1. Remove any redundant .zip files from Resources
+          rm -f "$APP_PATH/Contents/PlugIns/"*.appex/Contents/Resources/*.zip
+          rm -f "$APP_PATH/Contents/Resources/"*.zip
+
+          # 2. Ad-hoc sign inner .appex extension bundle(s) first
+          for appex in "$APP_PATH/Contents/PlugIns/"*.appex; do
+            echo "Signing extension: $appex"
+            codesign --force --sign - "$appex"
+          done
+
+          # 3. Ad-hoc sign the outer .app bundle deeply (generates _CodeSignature)
+          echo "Signing host app: $APP_PATH"
+          codesign --force --deep --sign - "$APP_PATH"
+
+          # 4. Verify signature and _CodeSignature presence
+          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+          ls -la "$APP_PATH/Contents/_CodeSignature"
+
+          # 5. Package into a single clean macOS zip using Apple's ditto utility
+          rm -f "$GITHUB_WORKSPACE/safari-extension/RBU-Attendance-Planner-macOS.zip"
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$GITHUB_WORKSPACE/safari-extension/RBU-Attendance-Planner-macOS.zip"
+          cp "$GITHUB_WORKSPACE/safari-extension/RBU-Attendance-Planner-macOS.zip" "$GITHUB_WORKSPACE/RBU-Attendance-Planner-macOS.zip"
+
+      - name: Commit ready-built macOS .app zip to repository
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add safari-extension/RBU-Attendance-Planner-macOS.zip
+          if ! git diff --cached --quiet; then
+            git commit -m "build(safari): update signed macOS RBUAttendancePlanner.app bundle [skip ci]"
+            git pull --rebase origin main
+            git push origin main
+          else
+            echo "No changes to macOS app bundle."
+          fi
 
       - name: Upload macOS App Artifact
         uses: actions/upload-artifact@v4
